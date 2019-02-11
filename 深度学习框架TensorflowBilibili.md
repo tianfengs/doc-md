@@ -12,7 +12,7 @@ Ben
 
 2015年11月开源了TensorFlow
 
-可参考黄校长的深度学习课程
+可参考**黄校长**的深度学习课程
 
 本课程讲解TS的运作流程、使用方法，各种优化器的使用方法，cnn等网络
 
@@ -59,7 +59,7 @@ GPU: pip install tensorflow-gpu
 
       conda create -n py35 python=3.5.6 anaconda
 
-   3. 启动py35环境
+   3. 启动py35环境(前提：要启动Anaconda Prompt)
 
       activate py35
 
@@ -81,7 +81,7 @@ GPU: pip install tensorflow-gpu
 
       conda install jupyter
 
-   8. 启动jupyter notebook并检测
+   8. 启动jupyter notebook并检测（在Anaconda Prompt中）
 
       jupyter notebook
 
@@ -102,12 +102,23 @@ GPU: pip install tensorflow-gpu
 Tensorflow是一个编程系统
 
 - 使用图（graphs）来表示计算任务
+
 - 图中的节点称为op（operation）
+
 - 一个op获得0个或多个Tensor（张量：常量、变量、占位符、稀疏张量。。。），执行计算，产生0或多个Tensor
+
 - Tensor看做是一个n维的数组或列表，用来表示数据
+
 - 图必须在会话（Session）的上下文（Context）里被启动执行
+
 - 通过变量（Variable）维护状态
+
 - 使用feed和fetch可以为任意的操作赋值或从中获取数据
+
+  - fetch：同时运行多个op
+  - feed：在运行的时候传入数据，以字典的方式传入
+
+  ![](D:\maidan\doc笔记md\pics\Tensorflow结构.png)
 
 ##### 2-4Tensorflow简单示例
 
@@ -268,3 +279,24 @@ import matplotlib.pyplot as plt #绘图的库
    	plt.scatter(x_data,y_data)
    	plt.plot(x_data,prediction_value,'r-',lw=3)
    ```
+
+第三课（需要学习**吴恩达**的课程）
+
+3-2 MNIST数据集：手写数字数字集
+
+- MNIST Database官网：http://yann.lecun.com/exdb/mnist/
+
+- 数据集分为两部分：6万行训练数据集(minst.train)和1万行测试数据集(mnist.test)
+
+- 每张图片包含28x28个像素，展开成向量，长度28*28=784.因此训练数据集mnist.train.images是一个形状为[60000,784]的张量或矩阵。图片里的某个像素的强度值介于0-1之间。
+
+  ![](D:\maidan\doc笔记md\pics\www.bilibili.com_video_av20542427__p=9.png)
+
+- 数据集的标签是介于0-9的数字，要把标签转化为"one-hot vectors"。一个one-hot向量除了某一位数字是1以外，其余维度数字都是0。标签0表示为([1,0,0,0,0,0,0,0,0,0])，标签3表示为([0,0,0,1,0,0,0,0,0,0]).
+- 因此，mnist.train.labels是一个[60000,10]的数字矩阵
+- 神经网络构建 784-->10(感知器，因为没有中间层，直接输入->输出)
+
+**Softmax函数**
+
+​	用概率来确定是某一个数字的概率，取概率最高的数字为确认数字。
+

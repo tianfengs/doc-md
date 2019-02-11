@@ -70,7 +70,7 @@ MVVM入门与提高 主讲：刘铁锰
 一些使用技巧：
 
 - 如果使用了一个没有using过的类的方法，则在方法处按Alt+Enter或Ctrl+.弹出提示
-- ![MVVM 原理图](D:\maidan\doc笔记md\MVVMPrinzip.png)
+- ![MVVM 原理图](D:\maidan\doc笔记md\pics\MVVMPrinzip.png)
 - CrazyElephant案例
   - 建立xml文件，模拟数据接口
   - 建立Services文件夹，来读取数据
