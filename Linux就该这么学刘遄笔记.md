@@ -4,7 +4,7 @@ Linux运维工程师从0基础到实践 20课（小时）
 
 ##### 许可证
 
-![Linux就该这么学01](D:\maidan\doc笔记md\pics\Linux就该这么学01.png)
+![Linux就该这么学01](pics\Linux就该这么学01.png)
 
 ##### Linux优势
 
@@ -906,7 +906,6 @@ HISTORY：		维护历史与联系方式
    
    ```
 
-   
 
 > 文件系统层次结构标准(FHS，Filesystem Hierarchy Standard )(for Linux)-简介
 >
@@ -1214,4 +1213,605 @@ Last login: Fri Mar 20 21:52:10 CST 2017 on pts/0
 [linuxprobe@linuxprobe workdir]$ pwd
 /home/workdir
 ```
+
+### 第四章 Vim编辑器与Shell命令脚本
+
+- vim编辑器用法。并通过配置主机名、网卡以及Yum软件仓库参数文件学习命令、快捷键、模式切换方法。
+
+- 把Linux命令、命令语法与Shell脚本中的流程控制语句结合，通过vim写到Shell脚本中，实现自动化工作的脚本文件。
+
+- 通过at命令和crond计划任务服务，实现一次性系统任务设置和长期性的系统任务设置。
+
+“**在[Linux系统](https://www.linuxprobe.com/)中一切都是文件，而配置一个服务就是在修改其配置文件的参数**"
+
+##### 4.1 Vim文本编辑器
+
+Vim编辑器中设置了三种模式—命令模式、末行模式和编辑模式
+
+- 命令模式：控制光标移动，可对文本进行复制、粘贴、删除和查找等工作。
+
+  ```
+  dd	删除（剪切）光标所在整行
+  5dd	删除（剪切）从光标处开始的5行
+  yy	复制光标所在整行
+  5yy	复制从光标处开始的5行
+  n	显示搜索命令定位到的下一个字符串
+  N	显示搜索命令定位到的上一个字符串
+  u	撤销上一步的操作
+  p	将之前删除（dd）或复制（yy）过的数据粘贴到光标后面
+  ```
+
+- 输入模式：正常的文本录入。
+
+- 末行模式：保存或退出文档，以及设置编辑环境。
+
+  ```
+  :w	保存
+  :q	退出
+  :q!	强制退出（放弃对文档的修改内容）
+  :wq!	强制保存退出
+  :set nu	显示行号
+  :set nonu	不显示行号
+  :命令	执行该命令
+  :整数	跳转到该行
+  :s/one/two	将当前光标所在行的第一个one替换成two
+  :s/one/two/g	将当前光标所在行的所有one替换成two
+  :%s/one/two/g	将全文中的所有one替换成two
+  ?字符串	在文本中从下至上搜索该字符串
+  /字符串	在文本中从上至下搜索该字符串
+  ```
+
+  
+
+![vim不同模式间的切换](pics\vim不同模式间的切换.png)
+
+###### 4.1.1 编写简单文档
+
+###### 4.1.2 配置主机名称
+
+**第1步**：使用Vim编辑器修改“/etc/hostname”主机名称文件。
+
+**第2步**：把原始主机名称删除后追加“linuxprobe.com”。注意，使用Vim编辑器修改主机名称文件后，要在末行模式下执行:wq!命令才能保存并退出文档。
+
+**第3步**：保存并退出文档，然后使用hostname命令检查是否修改成功。
+
+###### 4.1.3 配置网卡信息
+
+在RHEL 5、RHEL 6中，网卡配置文件的前缀为eth，第1块网卡为eth0，第2块网卡为eth1；以此类推。而在RHEL 7中，网卡配置文件的前缀则以ifcfg开始，加上网卡名称共同组成了网卡配置文件的名字，例如ifcfg-eno16777736；除了文件名变化外也没有其他大的区别。
+
+**第1步**：首先切换到/etc/sysconfig/network-scripts目录中（存放着网卡的配置文件）。
+
+**第2步**：使用Vim编辑器修改网卡文件ifcfg-eno16777736，逐项写入下面的配置参数并保存退出。由于每台设备的硬件及架构是不一样的，因此请读者使用ifconfig命令自行确认各自网卡的默认名称。
+
+> 设备类型：TYPE=Ethernet
+>
+> 地址分配模式：BOOTPROTO=static
+>
+> 网卡名称：NAME=eno16777736
+>
+> 是否启动：ONBOOT=yes
+>
+> IP地址：IPADDR=192.168.10.10
+>
+> 子网掩码：NETMASK=255.255.255.0
+>
+> 网关地址：GATEWAY=192.168.10.1
+>
+> DNS地址：DNS1=192.168.10.1
+
+**第3步**：重启网络服务并测试网络是否联通。
+
+```
+[root@linuxprobe network-scripts]# systemctl restart network
+```
+
+###### 4.1.4 配置Yum仓库
+
+**第1步**：进入到/etc/yum.repos.d/目录中（因为该目录存放着Yum软件仓库的配置文件）。
+
+**第2步**：使用Vim编辑器创建一个名为rhel7.repo的新配置文件（文件名称可随意，但后缀必须为.repo），逐项写入下面加粗的配置参数并保存退出（不要写后面的中文注释）。
+
+> **[rhel-media]** ：Yum软件仓库唯一标识符，避免与其他仓库冲突。
+>
+> **name=linuxprobe**：Yum软件仓库的名称描述，易于识别仓库用处。
+>
+> **baseurl=file:///media/cdrom**：提供的方式包括FTP（ftp://..）、HTTP（http://..）、本地（file:///..）。
+>
+> **enabled=1**：设置此源是否可用；1为可用，0为禁用。
+>
+> **gpgcheck=1**：设置此源是否校验文件；1为校验，0为不校验。
+>
+> **gpgkey=file:///media/cdrom/RPM-GPG-KEY-redhat-release**：若上面参数开启校验，那么请指定公钥文件地址。
+
+**第3步**：按配置参数的路径挂载光盘，并把光盘挂载信息写入到/etc/fstab文件中。
+
+**第4步**：使用“yum install httpd -y”命令检查Yum软件仓库是否已经可用。
+
+##### 4.2 编写Shell脚本
+
+Shell脚本命令的工作方式有两种：交互式和批处理。
+
+> 交互式（Interactive）：用户每输入一条命令就立即执行。
+>
+> 批处理（Batch）：由用户事先编写好一个完整的Shell脚本，Shell会一次性执行脚本中诸多的命令。
+
+###### 4.2.1 编写简单的脚本
+
+例如，如果想查看当前所在工作路径并列出当前目录下所有的文件及属性信息，实现这个功能的脚本应该类似于下面这样：
+
+```
+[root@linuxprobe ~]# vim example.sh
+#!/bin/bash 			# 第一行的脚本声明（#!）用来告诉系统使用哪种Shell解释器来执行该脚本；
+#For Example BY linuxprobe.com # 第二行的注释信息（#）是对脚本功能和某些命令的介绍信息
+pwd 
+ls -al
+```
+
+执行一下看看结果：
+
+```
+[root@linuxprobe ~]# bash example.sh
+/root/Desktop
+total 8
+drwxr-xr-x. 2 root root 23 Jul 23 17:31 .
+dr-xr-x---. 14 root root 4096 Jul 23 17:31 ..
+-rwxr--r--. 1 root root 55 Jul 23 17:31 example.sh
+```
+
+第二种运行脚本程序的方法是通过输入完整路径的方式来执行。但默认会因为权限不足而提示报错信息，此时只需要为脚本文件增加执行权限即可（详见第5章）。：
+
+```
+[root@linuxprobe ~]# ./example.sh
+bash: ./Example.sh: Permission denied
+[root@linuxprobe ~]# chmod u+x example.sh
+[root@linuxprobe ~]# ./example.sh
+/root/Desktop
+total 8
+drwxr-xr-x. 2 root root 23 Jul 23 17:31 .
+dr-xr-x---. 14 root root 4096 Jul 23 17:31 ..
+-rwxr--r--. 1 root root 55 Jul 23 17:31 example.sh
+```
+
+###### 4.2.2 接收用户的参数
+
+Linux系统中的Shell脚本语言内设了用于接收参数的变量，变量之间可以使用空格间隔。
+
+$0对应的是当前Shell脚本程序的名称
+
+$#对应的是总共有几个参数
+
+$*对应的是所有位置的参数值
+
+$?对应的是显示上一次命令的执行返回值
+
+$1、$2、$3……则分别对应着第N个位置的参数值，如图所示
+
+![Shell脚本程序中的参数位置变量](pics\Shell脚本程序中的参数位置变量.png)
+
+###### 4.2.3 判断用户的参数
+
+系统在执行mkdir命令时会判断用户输入的信息，即判断用户指定的文件夹名称是否已经存在，如果存在则提示报错；反之则自动创建。Shell脚本中的条件测试语法可以判断表达式是否成立，若条件成立则返回数字0，否则便返回其他随机数值。条件测试语法的执行格式如图4-16所示。切记，条件表达式两边均应有一个空格。
+
+![测试语句格式](pics\测试语句格式.png)
+
+按照测试对象来划分，条件测试语句可以分为4种：
+
+- 文件测试语句；
+
+  ```
+  -d	测试文件是否为目录类型
+  -e	测试文件是否存在
+  -f	判断是否为一般文件
+  -r	测试当前用户是否有权限读取
+  -w	测试当前用户是否有权限写入
+  -x	测试当前用户是否有权限执行
+  
+  下面使用文件测试语句来判断/etc/fstab是否为一个目录类型的文件，然后通过Shell解释器的内设$?变量显示上一条命令执行后的返回值。如果返回值为0，则目录存在；如果返回值为非零的值，则意味着目录不存在：
+  [root@linuxprobe ~]# [ -d /etc/fstab ]
+  [root@linuxprobe ~]# echo $?
+  1
+  ```
+
+- 逻辑测试语句；
+
+  ```
+  逻辑语句用于对测试结果进行逻辑分析，根据测试结果可实现不同的效果。例如在Shell终端中逻辑“与”的运算符号是&&，它表示当前面的命令执行成功后才会执行它后面的命令，因此可以用来判断/dev/cdrom文件是否存在，若存在则输出Exist字样。
+  [root@linuxprobe ~]# [ -e /dev/cdrom ] && echo "Exist"
+  Exist
+  
+  逻辑“或”，它在Linux系统中的运算符号为||，表示当前面的命令执行失败后才会执行它后面的命令，因此可以用来结合系统环境变量USER来判断当前登录的用户是否为非管理员身份：
+  [root@linuxprobe ~]# echo $USER
+  root
+  [root@linuxprobe ~]# [ $USER = root ] || echo "user"
+  [root@linuxprobe ~]# su - linuxprobe 
+  [linuxprobe@linuxprobe ~]$ [ $USER = root ] || echo "user"
+  user
+  
+  逻辑“非”-（！），它表示把条件测试中的判断结果取相反值。
+  我们现在判断当前用户是否为一个非管理员的用户。由于判断结果因为两次否定而变成正确，因此会正常地输出预设信息：
+  [linuxprobe@linuxprobe ~]$ exit
+  logout
+  [root@linuxprobe root]# [ $USER != root ] || echo "administrator"
+  administrator
+  
+  当前我们正在登录的即为管理员用户—root。下面这个示例的执行顺序是，先判断当前登录用户的USER变量名称是否等于root，然后用逻辑运算符“非”进行取反操作，效果就变成了判断当前登录的用户是否为非管理员用户了。最后若条件成立则会根据逻辑“与”运算符输出user字样；或条件不满足则会通过逻辑“或”运算符输出root字样，而如果前面的&&不成立才会执行后面的||符号。
+  [root@linuxprobe ~]# [ $USER != root ] && echo "user" || echo "root"
+  root
+  ```
+
+- 整数值比较语句；
+
+  ```
+  整数比较运算符仅是对数字的操作，不能将数字与字符串、文件等内容一起操作，而且不能想当然地使用日常生活中的等号、大于号、小于号等来判断。因为等号与赋值命令符冲突，大于号和小于号分别与输出重定向命令符和输入重定向命令符冲突
+  -eq	是否等于
+  -ne	是否不等于
+  -gt	是否大于
+  -lt	是否小于
+  -le	是否等于或小于
+  -ge	是否大于或等于
+  
+  测试一下10是否大于10以及10是否等于10（通过输出的返回值内容来判断）：
+  [root@linuxprobe ~]# [ 10 -gt 10 ]
+  [root@linuxprobe ~]# echo $?
+  1
+  [root@linuxprobe ~]# [ 10 -eq 10 ]
+  [root@linuxprobe ~]# echo $?
+  0
+  
+  先使用free -m命令查看内存使用量情况（单位为MB），然后通过grep Mem:命令过滤出剩余内存量的行，再用awk '{print $4}'命令只保留第四列，最后用FreeMem=`语句`的方式把语句内执行的结果赋值给变量。
+  [root@linuxprobe ~]# free -m
+              total     used     free     shared     buffers     cached
+  Mem:        1826      1244     582      9          1           413
+  -/+ buffers/cache:    830 996
+  Swap:       2047      0        2047
+  [root@linuxprobe ~]# free -m | grep Mem:
+  Mem:        1826      1244     582      9 
+  [root@linuxprobe ~]# free -m | grep Mem: | awk '{print $4}'
+  582
+  [root@linuxprobe ~]# FreeMem=`free -m | grep Mem: | awk '{print $4}'`
+  [root@linuxprobe ~]# echo $FreeMem 
+  582
+  我们使用整数运算符来判断内存可用量的值是否小于1024，若小于则会提示“Insufficient Memory”（内存不足）的字样：
+  [root@linuxprobe ~]# [ $FreeMem -lt 1024 ] && echo "Insufficient Memory"
+  Insufficient Memory
+  ```
+
+- 字符串比较语句。
+
+  ```
+  字符串比较语句用于判断测试字符串是否为空值，或两个字符串是否相同。它经常用来判断某个变量是否未被定义（即内容为空值）
+  =	比较字符串内容是否相同
+  !=	比较字符串内容是否不同
+  -z	判断字符串内容是否为空
+  
+  接下来通过判断String变量是否为空值，进而判断是否定义了这个变量：
+  [root@linuxprobe ~]# [ -z $String ]
+  [root@linuxprobe ~]# echo $?
+  0
+  
+  尝试引入逻辑运算符来试一下。当用于保存当前语系的环境变量值LANG不是英语（en.US）时，则会满足逻辑测试条件并输出“Not en.US”（非英语）的字样：
+  [root@linuxprobe ~]# echo $LANG
+  en_US.UTF-8
+  [root@linuxprobe ~]# [ $LANG != "en.US" ] && echo "Not en.US"
+  Not en.US
+  ```
+
+##### 4.3 流程控制语句
+
+我们通过if、for、while、case这4种流程控制语句来学习编写难度更大、功能更强的Shell脚本。
+
+###### 4.3.1 if条件测试语句
+
+if条件语句分为单分支结构、双分支结构、多分支结构
+
+- 单分支结构由if、then、fi关键词组成
+
+  ```
+  使用单分支的if条件语句来判断/media/cdrom文件是否存在，若存在就结束条件判断和整个Shell脚本，反之则去创建这个目录：
+  [root@linuxprobe ~]# vim mkcdrom.sh
+  #!/bin/bash
+  DIR="/media/cdrom"
+  if [ ! -e $DIR ]
+  then
+  	mkdir -p $DIR
+  fi
+  
+  这里继续用“bash 脚本名称”的方式来执行脚本。在正常情况下，顺利执行完脚本文件后没有任何输出信息，但是可以使用ls命令验证/media/cdrom目录是否已经成功创建：
+  [root@linuxprobe ~]# bash mkcdrom.sh
+  [root@linuxprobe ~]# ls -d /media/cdrom
+  /media/cdrom
+  ```
+
+- 双分支结构由if、then、else、fi关键词组成
+
+  ```
+  下面使用双分支的if条件语句来验证某台主机是否在线，然后根据返回值的结果，要么显示主机在线信息，要么显示主机不在线信息。这里的脚本主要使用ping命令来测试与对方主机的网络联通性，而Linux系统中的ping命令不像Windows一样尝试4次就结束，因此为了避免用户等待时间过长，需要通过-c参数来规定尝试的次数，并使用-i参数定义每个数据包的发送间隔，以及使用-W参数定义等待超时时间。
+  [root@linuxprobe ~]# vim chkhost.sh
+  #!/bin/bash
+  ping -c 3 -i 0.2 -W 3 $1 &> /dev/null
+  if [ $? -eq 0 ]
+  then
+  echo "Host $1 is On-line."
+  else
+  echo "Host $1 is Off-line."
+  fi
+  
+  我们来验证一下脚本的效果：
+  [root@linuxprobe ~]# bash chkhost.sh 192.168.10.10
+  Host 192.168.10.10 is On-line.
+  [root@linuxprobe ~]# bash chkhost.sh 192.168.10.20
+  Host 192.168.10.20 is Off-line.
+  ```
+
+  **注意：/dev/null是一个被称作Linux黑洞的文件，把输出信息重定向到这个文件等同于删除数据（类似于没有回收功能的垃圾箱），可以让用户的屏幕窗口保持简洁。**
+
+- 多分支结构由if、then、else、elif、fi关键词组成
+
+  ```
+  下面使用多分支的if条件语句来判断用户输入的分数在哪个成绩区间内，然后输出如Excellent、Pass、Fail等提示信息。在Linux系统中，read是用来读取用户输入信息的命令，能够把接收到的用户输入信息赋值给后面的指定变量，-p参数用于向用户显示一定的提示信息。在下面的脚本示例中，只有当用户输入的分数大于等于85分且小于等于100分，才输出Excellent字样；若分数不满足该条件（即匹配不成功），则继续判断分数是否大于等于70分且小于等于84分，如果是，则输出Pass字样；若两次都落空（即两次的匹配操作都失败了），则输出Fail字样：
+  [root@linuxprobe ~]# vim chkscore.sh
+  #!/bin/bash
+  read -p "Enter your score（0-100）：" GRADE
+  if [ $GRADE -ge 85 ] && [ $GRADE -le 100 ] ; then
+  echo "$GRADE is Excellent"
+  elif [ $GRADE -ge 70 ] && [ $GRADE -le 84 ] ; then
+  echo "$GRADE is Pass"
+  else
+  echo "$GRADE is Fail" 
+  fi
+  [root@linuxprobe ~]# bash chkscore.sh
+  Enter your score（0-100）：88
+  88 is Excellent
+  [root@linuxprobe ~]# bash chkscore.sh 
+  Enter your score（0-100）：80
+  80 is Pass
+  
+  下面执行该脚本。当用户输入的分数分别为30和200时，其结果如下：
+  [root@linuxprobe ~]# bash chkscore.sh  
+  Enter your score（0-100）：30
+  30 is Fail
+  [root@linuxprobe ~]# bash chkscore.sh
+  Enter your score（0-100）：200 
+  200 is Fail
+  
+  为什么输入的分数为200时，依然显示Fail呢？原因很简单—没有成功匹配脚本中的两个条件判断语句，因此自动执行了最终的兜底策略。可见，这个脚本还不是很完美，建议读者自行完善这个脚本，使得用户在输入大于100或小于0的分数时，给予Error报错字样的提示。
+  ```
+
+###### 4.3.2 for条件循环语句
+
+![for条件语句-1](pics\for条件语句-1.png)
+
+```
+使用for循环语句从列表文件中读取多个用户名，然后为其逐一创建用户账户并设置密码。首先创建用户名称的列表文件users.txt，每个用户名称单独一行。读者可以自行决定具体的用户名称和个数：
+[root@linuxprobe ~]# vim users.txt
+andy
+barry
+carl
+duke
+eric
+george
+
+接下来编写Shell脚本Example.sh。在脚本中使用read命令读取用户输入的密码值，然后赋值给PASSWD变量，并通过-p参数向用户显示一段提示信息，告诉用户正在输入的内容即将作为账户密码。在执行该脚本后，会自动使用从列表文件users.txt中获取到所有的用户名称，然后逐一使用“id 用户名”命令查看用户的信息，并使用$?判断这条命令是否执行成功，也就是判断该用户是否已经存在。
+
+注意：/dev/null是一个被称作Linux黑洞的文件，把输出信息重定向到这个文件等同于删除数据（类似于没有回收功能的垃圾箱），可以让用户的屏幕窗口保持简洁。
+
+[root@linuxprobe ~]# vim Example.sh
+#!/bin/bash
+read -p "Enter The Users Password : " PASSWD
+for UNAME in `cat users.txt`
+do
+id $UNAME &> /dev/null
+if [ $? -eq 0 ]
+then
+echo "Already exists"
+else
+useradd $UNAME &> /dev/null
+echo "$PASSWD" | passwd --stdin $UNAME &> /dev/null
+if [ $? -eq 0 ]
+then
+echo "$UNAME , Create success"
+else
+echo "$UNAME , Create failure"
+fi
+fi
+done
+
+执行批量创建用户的Shell脚本Example.sh，在输入为账户设定的密码后将由脚本自动检查并创建这些账户。由于已经将多余的信息通过输出重定向符转移到了/dev/null黑洞文件中，因此在正常情况下屏幕窗口除了“用户账户创建成功”（Create success）的提示后不会有其他内容。
+
+在Linux系统中，/etc/passwd是用来保存用户账户信息的文件。如果想确认这个脚本是否成功创建了用户账户，可以打开这个文件，看其中是否有这些新创建的用户信息。
+[root@linuxprobe ~]# bash Example.sh
+Enter The Users Password : linuxprobe
+andy , Create success
+barry , Create success
+carl , Create success
+duke , Create success
+eric , Create success
+george , Create success
+[root@linuxprobe ~]# tail -6 /etc/passwd
+andy:x:1001:1001::/home/andy:/bin/bash
+barry:x:1002:1002::/home/barry:/bin/bash
+carl:x:1003:1003::/home/carl:/bin/bash
+duke:x:1004:1004::/home/duke:/bin/bash
+eric:x:1005:1005::/home/eric:/bin/bash
+george:x:1006:1006::/home/george:/bin/bash
+
+尝试让脚本从文本中自动读取主机列表，然后自动逐个测试这些主机是否在线。
+首先创建一个主机列表文件ipadds.txt：
+[root@linuxprobe ~]# vim ipadds.txt
+192.168.10.10
+192.168.10.11
+192.168.10.12
+然后前面的双分支if条件语句与for循环语句相结合，让脚本从主机列表文件ipadds.txt中自动读取IP地址（用来表示主机）并将其赋值给HLIST变量，从而通过判断ping命令执行后的返回值来逐个测试主机是否在线。脚本中出现的$（命令）是一种完全类似于第3章的转义字符中反引号`命令`的Shell操作符，效果同样是执行括号或双引号括起来的字符串中的命令。大家在编写脚本时，多学习几种类似的新方法，可在工作中大显身手：
+[root@linuxprobe ~]# vim CheckHosts.sh
+#!/bin/bash
+HLIST=$(cat ~/ipadds.txt)
+for IP in $HLIST
+do
+ping -c 3 -i 0.2 -W 3 $IP &> /dev/null
+if [ $? -eq 0 ] ; then
+echo "Host $IP is On-line."
+else
+echo "Host $IP is Off-line."
+fi
+done
+[root@linuxprobe ~]# ./CheckHosts.sh
+Host 192.168.10.10 is On-line.
+Host 192.168.10.11 is Off-line.
+Host 192.168.10.12 is Off-line.
+```
+
+###### 4.3.3 while条件循环语句
+
+![while条件语句-1](pics\while条件语句-1.png)
+
+```
+编写一个用来猜测数值大小的脚本Guess.sh。该脚本使用$RANDOM变量来调取出一个随机的数值（范围为0～32767），将这个随机数对1000进行取余操作，并使用expr命令取得其结果，再用这个数值与用户通过read命令输入的数值进行比较判断。这个判断语句分为三种情况，分别是判断用户输入的数值是等于、大于还是小于使用expr命令取得的数值。当前，现在这些内容不是重点，我们当前要关注的是while条件循环语句中的条件测试始终为true，因此判断语句会无限执行下去，直到用户输入的数值等于expr命令取得的数值后，这两者相等之后才运行exit 0命令，终止脚本的执行。
+
+[root@linuxprobe ~]# vim Guess.sh
+#!/bin/bash
+PRICE=$(expr $RANDOM % 1000)
+TIMES=0
+echo "商品实际价格为0-999之间，猜猜看是多少？"
+while true
+do
+read -p "请输入您猜测的价格数目：" INT
+let TIMES++
+if [ $INT -eq $PRICE ] ; then
+echo "恭喜您答对了，实际价格是 $PRICE"
+echo "您总共猜测了 $TIMES 次"
+exit 0
+elif [ $INT -gt $PRICE ] ; then
+echo "太高了！"
+else
+echo "太低了！"
+fi
+done
+
+在这个Guess.sh脚本中，我们添加了一些交互式的信息，从而使得用户与系统的互动性得以增强。而且每当循环到let TIMES++命令时都会让TIMES变量内的数值加1，用来统计循环总计执行了多少次。这可以让用户得知总共猜测了多少次之后，才猜对价格。
+
+[root@linuxprobe ~]# bash Guess.sh
+商品实际价格为0-999之间，猜猜看是多少？
+请输入您猜测的价格数目：500
+太低了！
+请输入您猜测的价格数目：800
+太高了！
+请输入您猜测的价格数目：650
+太低了！
+请输入您猜测的价格数目：720
+太高了！
+请输入您猜测的价格数目：690
+太低了！
+请输入您猜测的价格数目：700
+太高了！
+请输入您猜测的价格数目：695
+太高了！
+请输入您猜测的价格数目：692
+太高了！
+请输入您猜测的价格数目：691
+恭喜您答对了，实际价格是 691
+您总共猜测了 9 次
+```
+
+###### 4.3.4 case条件测试语句
+
+case语句是在多个范围内匹配数据，若匹配成功则执行相关命令并结束整个条件测试；而如果数据不在所列出的范围内，则会去执行星号（*）中所定义的默认命令
+
+![case条件语句-1](pics\case条件语句-1.png)
+
+```
+我们必须有一定的措施来判断用户的输入内容，当用户输入的内容不是数字时，脚本能予以提示，从而免于崩溃。
+
+通过在脚本中组合使用case条件测试语句和通配符（详见第3章），完全可以满足这里的需求。接下来我们编写脚本Checkkeys.sh，提示用户输入一个字符并将其赋值给变量KEY，然后根据变量KEY的值向用户显示其值是字母、数字还是其他字符。
+
+[root@linuxprobe ~]# vim Checkkeys.sh
+#!/bin/bash
+read -p "请输入一个字符，并按Enter键确认：" KEY
+case "$KEY" in
+[a-z]|[A-Z])
+echo "您输入的是 字母。"
+;;
+[0-9])
+echo "您输入的是 数字。"
+;;
+*)
+echo "您输入的是 空格、功能键或其他控制字符。"
+esac
+[root@linuxprobe ~]# bash Checkkeys.sh
+请输入一个字符，并按Enter键确认：6
+您输入的是 数字。
+[root@linuxprobe ~]# bash Checkkeys.sh
+请输入一个字符，并按Enter键确认：p
+您输入的是 字母。
+[root@linuxprobe ~]# bash Checkkeys.sh
+请输入一个字符，并按Enter键确认：^[[15~
+您输入的是 空格、功能键或其他控制字符。
+```
+
+##### 4.4 计划任务服务程序
+
+计划任务分为一次性计划任务与长期性计划任务，大家可以按照如下方式理解。
+
+> 一次性计划任务：今晚11点30分开启网站服务。
+>
+> 长期性计划任务：每周一的凌晨3点25分把/home/wwwroot目录打包备份为backup.tar.gz。
+
+- 一次性计划任务只执行一次，一般用于满足临时的工作需求。
+
+  ```
+  我们可以用at命令实现这种功能，只需要写成“at 时间”的形式就可以。如果想要查看已设置好但还未执行的一次性计划任务，可以使用“at -l”命令；要想将其删除，可以用“atrm 任务序号”。在使用at命令来设置一次性计划任务时，默认采用的是交互式方法。例如，使用下述命令将系统设置为在今晚23:30分自动重启网站服务。
+  [root@linuxprobe ~]# at 23:30
+  at > systemctl restart httpd
+  at > 此处请同时按下Ctrl+d来结束编写计划任务
+  job 3 at Mon Apr 27 23:30:00 2015
+  [root@linuxprobe ~]# at -l
+  3 Mon Apr 27 23:30:00 2016 a root
+  
+  可以把前面学习的管道符（任意门）放到两条命令之间，让at命令接收前面echo命令的输出信息，以达到通过非交互式的方式创建计划一次性任务的目的。
+  [root@linuxprobe ~]# echo "systemctl restart httpd" | at 23:30
+  job 4 at Mon Apr 27 23:30:00 2015
+  [root@linuxprobe ~]# at -l
+  3 Mon Apr 27 23:30:00 2016 a root
+  4 Mon Apr 27 23:30:00 2016 a root
+  
+  可以使用下面的命令轻松删除其中一个：
+  [root@linuxprobe ~]# atrm 3
+  [root@linuxprobe ~]# at -l
+  4 Mon Apr 27 23:30:00 2016 a root
+  ```
+
+- 如果希望Linux系统能够周期性地、有规律地执行某些具体的任务，要启用Linux系统中默认的crond服务
+
+  ```
+  crontab -e 		创建、编辑计划任务
+  crontab -l		查看当前计划任务的命令
+  crontab -r		删除某条计划任务的命令
+  crontab -u		如果以管理员的身份登录的系统，可以用来编辑他人的计划任务
+  
+  crond服务设置任务的参数格式：“分、时、日、月、星期 命令”。
+  如果有些字段没有设置，则需要使用星号（*）占位，如图:
+  ```
+
+  ![cron计划任务的参数](pics\cron计划任务的参数.png)
+
+  ```
+  分钟	取值为0～59的整数
+  小时	取值为0～23的任意整数
+  日期	取值为1～31的任意整数
+  月份	取值为1～12的任意整数
+  星期	取值为0～7的任意整数，其中0与7均为星期日
+  命令	要执行的命令或程序脚本
+  
+  假设在每周一、三、五的凌晨3点25分，都需要使用tar命令把某个网站的数据目录进行打包处理，使其作为一个备份文件。我们可以使用crontab -e命令来创建计划任务。为自己创建计划任务无需使用-u参数，具体的实现效果的参数如crontab -l命令结果所示：
+  [root@linuxprobe ~]# crontab -e
+  no crontab for root - using an empty one
+  crontab: installing new crontab
+  [root@linuxprobe ~]# crontab -l
+  25 3 * * 1,3,5 /usr/bin/tar -czvf backup.tar.gz /home/wwwroot
+  
+  需要说明的是，除了用逗号（,）来分别表示多个时间段，例如“8,9,12”表示8月、9月和12月。还可以用减号（-）来表示一段连续的时间周期（例如字段“日”的取值为“12-15”，则表示每月的12～15日）。以及用除号（/）表示执行任务的间隔时间（例如“*/2”表示每隔2分钟执行一次任务）。
+  ```
+
+  
+
+
 
