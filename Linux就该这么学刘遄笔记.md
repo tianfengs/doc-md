@@ -1,5 +1,9 @@
 Linux运维工程师从0基础到实践 20课（小时）
 
+[TOC]
+
+
+
 ### 第0章 学习方法和红帽系统
 
 ##### 许可证
@@ -906,6 +910,8 @@ HISTORY：		维护历史与联系方式
    
    ```
 
+### 文件系统层次结构标准(FHS，Filesystem Hierarchy Standard )(for Linux)-简介
+
 
 > 文件系统层次结构标准(FHS，Filesystem Hierarchy Standard )(for Linux)-简介
 >
@@ -1447,8 +1453,8 @@ $1、$2、$3……则分别对应着第N个位置的参数值，如图所示
   -ne	是否不等于
   -gt	是否大于
   -lt	是否小于
-  -le	是否等于或小于
   -ge	是否大于或等于
+  -le	是否等于或小于
   
   测试一下10是否大于10以及10是否等于10（通过输出的返回值内容来判断）：
   [root@linuxprobe ~]# [ 10 -gt 10 ]
@@ -1809,6 +1815,21 @@ esac
   25 3 * * 1,3,5 /usr/bin/tar -czvf backup.tar.gz /home/wwwroot
   
   需要说明的是，除了用逗号（,）来分别表示多个时间段，例如“8,9,12”表示8月、9月和12月。还可以用减号（-）来表示一段连续的时间周期（例如字段“日”的取值为“12-15”，则表示每月的12～15日）。以及用除号（/）表示执行任务的间隔时间（例如“*/2”表示每隔2分钟执行一次任务）。
+  
+  尤其需要注意的是，在crond服务的计划任务参数中，所有命令一定要用绝对路径的方式来写，如果不知道绝对路径，请用whereis命令进行查询，rm命令路径为下面输出信息中加粗部分。
+  [root@linuxprobe ~]# whereis rm
+  rm: /usr/bin/rm /usr/share/man/man1/rm.1.gz /usr/share/man/man1p/rm.1p.gz
+  [root@linuxprobe ~]# crontab -e
+  crontab: installing new crontab
+  [root@linuxprobe ~]# crontab -l
+  25 3 * * 1,3,5 /usr/bin/tar -czvf backup.tar.gz /home/wwwroot
+  0 1 * * 1-5 /usr/bin/rm -rf /tmp/*
+  
+  注意事项:
+  - 在crond服务的配置参数中，可以像Shell脚本那样以#号开头写上注释信息，这样在日后回顾这段命令代码时可以快速了解其功能、需求以及编写人员等重要信息。
+  - 计划任务中的“分”字段必须有数值，绝对不能为空或是*号，而“日”和“星期”字段不能同时使用，否则就会发生冲突。
+  
+  
   ```
 
   
