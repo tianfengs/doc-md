@@ -1482,6 +1482,27 @@ $1、$2、$3……则分别对应着第N个位置的参数值，如图所示
   Insufficient Memory
   ```
 
+  ```
+  awk命令：
+  [root@serverlinux Downloads]# cat example1.sh
+  #! /bin/bash
+  #
+  echo "当前的脚本名称为$0。"
+  echo "总共有$#个参数，分别是$*。"
+  echo "第一个参数为$1, 第5个参数为$5。"
+  
+  显示file文件中包含 0 的那一行
+  [root@serverlinux Downloads]# awk '/0/' example1.sh
+  echo "当前的脚本名称为$0。"
+  
+  [root@serverlinux Downloads]# awk '/0/,/5/' example1.sh
+  echo "当前的脚本名称为$0。"
+  echo "总共有$#个参数，分别是$*。"
+  echo "第一个参数为$1, 第5个参数为$5。"
+  ```
+
+  
+
 - 字符串比较语句。
 
   ```
