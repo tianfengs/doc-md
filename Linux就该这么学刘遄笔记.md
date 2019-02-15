@@ -1482,8 +1482,11 @@ $1、$2、$3……则分别对应着第N个位置的参数值，如图所示
   Insufficient Memory
   ```
 
+- awk命令
+
   ```
   awk命令：
+  用法：awk ' pattern {action} '  
   [root@serverlinux Downloads]# cat example1.sh
   #! /bin/bash
   #
@@ -1495,10 +1498,39 @@ $1、$2、$3……则分别对应着第N个位置的参数值，如图所示
   [root@serverlinux Downloads]# awk '/0/' example1.sh
   echo "当前的脚本名称为$0。"
   
+  显示file文件中包含0到包含5的那几行
   [root@serverlinux Downloads]# awk '/0/,/5/' example1.sh
   echo "当前的脚本名称为$0。"
   echo "总共有$#个参数，分别是$*。"
   echo "第一个参数为$1, 第5个参数为$5。"
+  
+  显示file中，第一域中有字符串echo的那些行
+  [root@linuxprobe xx]# awk '$1=="echo"' example1.sh 
+  echo "The name of current scritp is $0."
+  echo "The number of parameters is $#. They are $*"
+  echo "The 1st parameter is $1, the 5th parameter is $5."
+  
+  显示包含0那一行的第二个域
+  [root@linuxprobe xx]# awk '/0/ {print $2}' example1.sh 
+  "The
+  
+  根据新的分隔符"（双引号）来重新分区域，显示包含0那一行的，第二个区域的内容
+  [root@linuxprobe xx]# awk -F"\"" '/0/ {print $2}' example1.sh 
+  The name of current scritp is $0.
+  
+  调用脚本awkfile来进行控制：打印Hello！，然后打印每一行的第一、第二个域
+  [root@linuxprobe xx]# cat awkfile 
+  /0/{print "\047 Hello! \047"}    --遇到匹配行以后打印 ' Hello! '.  \047代表单引号。 
+  {print $1,$2}                      --因为没有模式控制，打印每一行的前两个域。
+  
+  [root@linuxprobe xx]# awk -f awkfile example1.sh 
+  #!/bin/bash 
+  # 
+  ' Hello! '
+  echo "The
+  echo "The
+  echo "The
+  
   ```
 
   
