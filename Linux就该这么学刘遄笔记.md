@@ -1465,21 +1465,22 @@ $1、$2、$3……则分别对应着第N个位置的参数值，如图所示
   0
   
   先使用free -m命令查看内存使用量情况（单位为MB），然后通过grep Mem:命令过滤出剩余内存量的行，再用awk '{print $4}'命令只保留第四列，最后用FreeMem=`语句`的方式把语句内执行的结果赋值给变量。
-  [root@linuxprobe ~]# free -m
-              total     used     free     shared     buffers     cached
-  Mem:        1826      1244     582      9          1           413
-  -/+ buffers/cache:    830 996
-  Swap:       2047      0        2047
-  [root@linuxprobe ~]# free -m | grep Mem:
-  Mem:        1826      1244     582      9 
-  [root@linuxprobe ~]# free -m | grep Mem: | awk '{print $4}'
-  582
-  [root@linuxprobe ~]# FreeMem=`free -m | grep Mem: | awk '{print $4}'`
-  [root@linuxprobe ~]# echo $FreeMem 
-  582
+  其实可以直接用awk过滤，不需要使用grep查询，这里只是练习管道符
+  [root@serverlinux Downloads]# free -m
+                total        used        free      shared  buff/cache   available
+  Mem:           3704        3273         120          35         310         103
+  Swap:          3968        1965        2003
+  [root@serverlinux Downloads]# FreeMem=`free -m | grep Mem: | awk '{print $4}'`
+  [root@serverlinux Downloads]# FreeMem=`free -m | awk '/Mem:/{print $4}'`
+  [root@serverlinux Downloads]# echo $FreeMem
+  121
   我们使用整数运算符来判断内存可用量的值是否小于1024，若小于则会提示“Insufficient Memory”（内存不足）的字样：
   [root@linuxprobe ~]# [ $FreeMem -lt 1024 ] && echo "Insufficient Memory"
   Insufficient Memory
+  
+  同上，如果当前可用内存<=116M，则显示内存不足，否则显示可用内存的数量
+  [root@serverlinux Downloads]# [ `free -m | awk '/Mem:/{print $4}'` -le 116 ] && echo "Insufficient Memory" || echo `free -m | awk '/Mem/{print $4}'`
+  122
   ```
 
 - awk命令
@@ -1487,6 +1488,40 @@ $1、$2、$3……则分别对应着第N个位置的参数值，如图所示
   ```
   awk命令：
   用法：awk ' pattern {action} '  
+  awk命令形式:
+  awk [-F|-f|-v] ‘BEGIN{} //{command1; command2} END{}’ file
+   [-F|-f|-v]   大参数，-F指定分隔符，-f调用脚本，-v定义变量 var=value
+  '  '          引用代码块
+  BEGIN   初始化代码块，在对每一行进行处理之前，初始化代码，主要是引用全局变量，设置FS分隔符
+  //           匹配代码块，可以是字符串或正则表达式
+  {}           命令代码块，包含一条或多条命令
+  ；          多条命令使用分号分隔
+  END      结尾代码块，在对每一行进行处理之后再执行的代码块，主要是进行最终计算或输出结尾摘要信息 
+  特殊要点:
+  $0           表示整个当前行
+  $1           每行第一个字段
+  NF          字段数量变量
+  NR          每行的记录号，多文件记录递增
+  FNR        与NR类似，不过多文件记录不递增，每个文件都从1开始
+  \t            制表符
+  \n           换行符
+  FS          BEGIN时定义分隔符
+  RS       输入的记录分隔符， 默认为换行符(即文本是按一行一行输入)
+  ~            匹配，与==相比不是精确比较
+  !~           不匹配，不精确比较
+  ==         等于，必须全部相等，精确比较
+  !=           不等于，精确比较
+  &&　     逻辑与
+  ||             逻辑或
+  +            匹配时表示1个或1个以上
+  /[0-9][0-9]+/   两个或两个以上数字
+  /[0-9][0-9]*/    一个或一个以上数字
+  FILENAME 文件名
+  OFS      输出字段分隔符， 默认也是空格，可以改为制表符等
+  ORS        输出的记录分隔符，默认为换行符,即处理结果也是一行一行输出到屏幕
+  -F'[:#/]'   定义三个分隔符
+  
+  开始范例：
   [root@serverlinux Downloads]# cat example1.sh
   #! /bin/bash
   #
@@ -1521,7 +1556,7 @@ $1、$2、$3……则分别对应着第N个位置的参数值，如图所示
   调用脚本awkfile来进行控制：打印Hello！，然后打印每一行的第一、第二个域
   [root@linuxprobe xx]# cat awkfile 
   /0/{print "\047 Hello! \047"}    --遇到匹配行以后打印 ' Hello! '.  \047代表单引号。 
-  {print $1,$2}                      --因为没有模式控制，打印每一行的前两个域。
+  {print $1,$2}                    --因为没有模式控制，打印每一行的前两个域。
   
   [root@linuxprobe xx]# awk -f awkfile example1.sh 
   #!/bin/bash 
@@ -1531,6 +1566,74 @@ $1、$2、$3……则分别对应着第N个位置的参数值，如图所示
   echo "The
   echo "The
   
+  显示第一个域为echo的那些行的第1和第2个域
+  [root@serverlinux Downloads]# awk '$1~/echo/{print $1,$2}' example1.sh
+  echo "当前的脚本名称为$0。"
+  echo "总共有$#个参数，分别是$*。"
+  echo "第一个参数为$1,
+  
+  计算当前目录下纯文件的大小之和
+  [root@serverlinux Downloads]# ll
+  total 8
+  -rw-r--r--. 1 root root 150 Feb 14 19:29 example1.sh
+  -rwxr--r--. 1 root root  51 Feb 14 15:27 example.sh
+  drwxr-xr-x. 2 root root  89 Feb 13 14:21 xx
+  [root@serverlinux Downloads]# ls -l|awk 'BEGIN{sum=0} !/^d/{sum+=$5} END{print "total size is:",sum,"B"}' # 解释：！非；^d以d开头的行；$5第五个域，即文件大小；
+  total size is: 201 B
+  
+  统计netstat -anp 状态为LISTEN和CONNECT的连接数量分别是多少
+  [root@serverlinux Downloads]# netstat -anp
+  Active Internet connections (servers and established)
+  Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+  tcp        0      0 0.0.0.0:5902            0.0.0.0:*               LISTEN      23291/Xvnc
+  tcp        0      0 0.0.0.0:5903            0.0.0.0:*               LISTEN      24221/Xvnc
+  。。。
+  Active UNIX domain sockets (servers and established)
+  Proto RefCnt Flags       Type       State         I-Node   PID/Program name     Path
+  unix  2      [ ACC ]     STREAM     LISTENING     166179   23312/dbus-daemon    @/tmp/dbus-aKbSoFysIR
+  unix  2      [ ACC ]     STREAM     LISTENING     29412    1411/master          private/virtual
+  。。。
+  unix  3      [ ]         STREAM     CONNECTED     168731   23766/tracker-miner
+  unix  3      [ ]         STREAM     CONNECTED     144114   17485/gnome-shell
+  unix  3      [ ]         STREAM     CONNECTED     37289    1826/packagekitd
+  。。。
+  [root@serverlinux Downloads]# netstat -anp|awk '$6~/LISTEN|CONNECTED/{sum[$6]++} END{for (i in sum) printf "%-10s %-6s %-3s \n", i," ",sum[i]}' 
+  #解释：第6个域含有LISTEN或CONNECTED,统计每种各自的数目总数，最后用一个for循环输出，格式化输出，%为分割符，-10表示长度为10个字符，s表示字符串类型，i为LISTEN或CONNECTED
+  LISTEN            20
+  CONNECTED         738
+  
+  统计当前目录下文件的总大小，不包括子文件夹
+  [root@serverlinux Downloads]# ls -l
+  total 68
+  -rw-r--r--. 1 root root   150 Feb 14 19:29 example1.sh
+  -rwxr--r--. 1 root root    51 Feb 14 15:27 example.sh
+  -rw-r--r--. 1 root root   395 Feb 16 09:41 fs
+  -rw-r--r--. 1 root root 56473 Feb 16 09:37 netstat.txt
+  drwxr-xr-x. 2 root root    89 Feb 13 14:21 xx
+  [root@serverlinux Downloads]# ls -l|awk 'NR!=1 && !/^d/{sum[$3]+=$5} END{for (i in sum) printf "%-6s %-5s %-3s %-2s \n" ,i," ",int(sum[i]/1000),"kB"}'
+  root         57  kB
+  [root@serverlinux Downloads]#
+  
+  输出成绩表
+  [root@serverlinux Downloads]# cat test0
+  Marry 2143 78 84 77
+  Jack 2321 66 78 45
+  Tom 2122 48 77 71
+  Mike 2537 87 97 95
+  Bob 2415 40 57 62
+  [root@serverlinux Downloads]# awk 'BEGIN{math=0;eng=0;com=0;printf "Lineno.   Name    No.    Math   English   Computer
+     Total\n";printf "------------------------------------------------------------\n"}{math+=$3; eng+=$4; com+=$5;printf
+  "%-8s %-7s %-7s %-7s %-9s %-10s %-7s \n",NR,$1,$2,$3,$4,$5,$3+$4+$5} END{printf "-------------------------------------- ----------------------\n";printf "%-24s %-7s %-9s %-20s \n","Total:",math,eng,com;printf "%-24s %-7s %-9s %-20s \n","Av g:",math/NR,eng/NR,com/NR}' test0
+  Lineno.   Name    No.    Math   English   Computer    Total
+  ------------------------------------------------------------
+  1        Marry   2143    78      84        77         239
+  2        Jack    2321    66      78        45         189
+  3        Tom     2122    48      77        71         196
+  4        Mike    2537    87      97        95         279
+  5        Bob     2415    40      57        62         159
+  ------------------------------------------------------------
+  Total:                   319     393       350
+  Avg:                     63.8    78.6      70
   ```
 
   
@@ -1612,11 +1715,13 @@ if条件语句分为单分支结构、双分支结构、多分支结构
   #!/bin/bash
   read -p "Enter your score（0-100）：" GRADE
   if [ $GRADE -ge 85 ] && [ $GRADE -le 100 ] ; then
-  echo "$GRADE is Excellent"
-  elif [ $GRADE -ge 70 ] && [ $GRADE -le 84 ] ; then
-  echo "$GRADE is Pass"
-  else
-  echo "$GRADE is Fail" 
+    echo "$GRADE is Excellent"
+    elif [ $GRADE -ge 70 ] && [ $GRADE -le 84 ] ; then
+      echo "$GRADE is Pass"
+    elif [ $GRADE -gt 100 ] || [ $GRADE -lt 0 ] ; then
+      echo "$GRADE is Error"
+    else
+      echo "$GRADE is Fail" 
   fi
   [root@linuxprobe ~]# bash chkscore.sh
   Enter your score（0-100）：88
@@ -1624,16 +1729,12 @@ if条件语句分为单分支结构、双分支结构、多分支结构
   [root@linuxprobe ~]# bash chkscore.sh 
   Enter your score（0-100）：80
   80 is Pass
-  
-  下面执行该脚本。当用户输入的分数分别为30和200时，其结果如下：
   [root@linuxprobe ~]# bash chkscore.sh  
   Enter your score（0-100）：30
   30 is Fail
   [root@linuxprobe ~]# bash chkscore.sh
   Enter your score（0-100）：200 
-  200 is Fail
-  
-  为什么输入的分数为200时，依然显示Fail呢？原因很简单—没有成功匹配脚本中的两个条件判断语句，因此自动执行了最终的兜底策略。可见，这个脚本还不是很完美，建议读者自行完善这个脚本，使得用户在输入大于100或小于0的分数时，给予Error报错字样的提示。
+  200 is Error
   ```
 
 ###### 4.3.2 for条件循环语句
@@ -1881,11 +1982,458 @@ esac
   注意事项:
   - 在crond服务的配置参数中，可以像Shell脚本那样以#号开头写上注释信息，这样在日后回顾这段命令代码时可以快速了解其功能、需求以及编写人员等重要信息。
   - 计划任务中的“分”字段必须有数值，绝对不能为空或是*号，而“日”和“星期”字段不能同时使用，否则就会发生冲突。
-  
-  
   ```
 
-  
+### 第五章 用户沈芬芬与文件权限
 
+本章将详细讲解文件的**所有者**、**所属组**以及**其他人**可对文件进行的**读（r）、写（w）、执行（x）**等操作
 
+如何在[Linux系统](https://www.linuxprobe.com/)中**添加、删除、修改**用户**账户信息**。
+
+使用**SUID、SGID**与**SBIT**特殊权限更加灵活地设置系统权限功能，来弥补对文件设置一般操作权限时所带来的不足。
+
+**隐藏权限**能够给系统增加一层隐形的防护层，让黑客最多只能查看关键日志信息，而不能进行修改或删除。
+
+**文件的访问控制列表（Access Control List，ACL）**可以进一步让单一用户、用户组对单一文件或目录进行特殊的权限设置，让文件具有能满足工作需求的最小权限。
+
+使用**su命令**与**sudo服务**让普通用户具备管理员权限，不仅满足日常的工作需求，还可以确保系统的安全。
+
+##### 5.1 用户身份与能力
+
+在Linux系统中，**UID**就相当于我们的身份证号码一样具有唯一性，因此可通过用户的UID值来判断用户身份。在RHEL 7系统中，用户身份有下面这些。
+
+> 管理员UID为0：系统的管理员用户。
+>
+> 系统用户UID为1～999： Linux系统为了避免因某个服务程序出现漏洞而被黑客提权至整台服务器，默认服务程序会有独立的系统用户负责运行，进而有效控制被破坏范围。
+>
+> 普通用户UID从1000开始：是由管理员创建的用于日常工作的用户。
+
+Linux系统中还引入了用户组的概念。通过使用**用户组号码（GID，Group IDentification）**，我们可以把多个用户加入到同一个组中，从而方便为组中的用户统一规划权限或指定任务。
+
+在Linux系统中创建每个用户时，将自动创建一个与其同名的**基本用户组**，而且这个基本用户组只有该用户一个人。如果该用户以后被归纳入其他用户组，则这个其他用户组称之为**扩展用户组**。**一个用户只有一个基本用户组，但是可以有多个扩展用户组**。
+
+###### 5.1.1.useradd命令
+
+useradd命令用于创建新的用户。默认的用户家目录会被存放**在/home目录下**中，默认的Shell**解释器为/bin/bash**，而且默认会创建一个与该用户同名的**基本用户组**。
+
+```
+useradd命令格式为：useradd [选项] 用户名
+
+-d	指定用户的家目录（默认为/home/username）
+-e	账户的到期时间，格式为YYYY-MM-DD.
+-u	指定该用户的默认UID
+-g	指定一个初始的用户基本组（必须已存在）
+-G	指定一个或多个扩展用户组
+-N	不创建与用户同名的基本用户组
+-s	指定该用户的默认Shell解释器
+
+创建一个普通用户:(一旦用户的解释器被设置为nologin，则代表该用户不能登录到系统中)
+[root@linuxprobe ~]# useradd -d /home/linux -u 8888 -s /sbin/nologin linuxprobe
+[root@linuxprobe ~]# id linuxprobe
+uid=8888(linuxprobe) gid=8888(linuxprobe) groups=8888(linuxprobe)
+[root@linuxprobe ~]# tail -n 3 /etc/passwd
+```
+
+###### 5.1.2 groupadd命令
+
+groupadd命令用于创建用户组。
+
+```
+groupadd命令格式为：groupadd [选项] 群组名
+
+[root@linuxprobe ~]# groupadd ronny
+[root@linuxprobe ~]# tail -n 3 /etc/group
+```
+
+###### 5.1.3 usermod命令
+
+usermod命令用于修改用户的属性。用户的信息保存在**/etc/passwd文件**中，可以直接用文本编辑器来修改其中的用户参数项目，也可以用usermod命令修改已经创建的用户信息，诸如用户的UID、基本/扩展用户组、默认终端等
+
+```
+usermod命令格式为：usermod [选项] 用户名”
+-c	填写用户账户的备注信息
+-d -m	参数-m与参数-d连用，可重新指定用户的家目录并自动把旧的数据转移过去
+-e	账户的到期时间，格式为YYYY-MM-DD
+-g	变更所属用户组
+-G	变更扩展用户组
+-L	锁定用户禁止其登录系统
+-U	解锁用户，允许其登录系统
+-s	变更默认终端
+-u	修改用户的UID
+
+先来看一下账户linuxprobe的默认信息：
+[root@linuxprobe ~]# id linuxprobe
+uid=1000(linuxprobe) gid=1000(linuxprobe) groups=1000(linuxprobe)
+
+然后将用户linuxprobe加入到root用户组中，这样扩展组列表中则会出现root用户组的字样，而基本组不会受到影响：
+[root@linuxprobe ~]# usermod -G root linuxprobe
+[root@linuxprobe ~]# id linuxprobe
+uid=1000(linuxprobe) gid=1000(linuxprobe) groups=1000(linuxprobe),0(root)
+
+再来试试用-u参数修改linuxprobe用户的UID号码值。除此之外，我们还可以用-g参数修改用户的基本组ID，用-G参数修改用户扩展组ID。
+[root@linuxprobe ~]# usermod -u 8888 linuxprobe
+[root@linuxprobe ~]# id linuxprobe
+uid=8888(linuxprobe) gid=1000(linuxprobe) groups=1000(linuxprobe),0(root)
+```
+
+###### 5.1.4. passwd命令
+
+passwd命令用于修改用户密码、过期时间、认证信息等
+
+```
+passwd命令格式为：passwd [选项] [用户名]
+-l	锁定用户，禁止其登录
+-u	解除锁定，允许用户登录
+--stdin	允许通过标准输入修改用户密码，如echo "NewPassWord" | passwd --stdin Username
+-d	使该用户可用空密码登录系统
+-e	强制用户在下次登录时修改密码
+-S	显示用户的密码是否被锁定，以及密码所采用的加密算法名称
+
+修改用户自己的密码，以及如何修改其他人的密码（修改他人密码时，需要具有root管理员权限）：
+[root@linuxprobe ~]# passwd
+Changing password for user root.
+New password:此处输入密码值
+Retype new password: 再次输入进行确认
+passwd: all authentication tokens updated successfully.
+[root@linuxprobe ~]# passwd linuxprobe
+Changing password for user linuxprobe.
+New password:此处输入密码值
+Retype new password: 再次输入进行确认
+passwd: all authentication tokens updated successfully.
+
+假设您有位同事正在度假，而且假期很长，那么可以使用passwd命令禁止该用户登录系统，等假期结束回归工作岗位时，再使用该命令允许用户登录系统，而不是将其删除
+[root@linuxprobe ~]# passwd -l linuxprobe
+Locking password for user linuxprobe.
+passwd: Success
+[root@linuxprobe ~]# passwd -S linuxprobe
+linuxprobe LK 2017-12-26 0 99999 7 -1 (Password locked.)
+[root@linuxprobe ~]# passwd -u linuxprobe
+Unlocking password for user linuxprobe.
+passwd: Success
+[root@linuxprobe ~]# passwd -S linuxprobe
+linuxprobe PS 2017-12-26 0 99999 7 -1 (Password set, SHA512 crypt.)
+```
+
+###### 5.1.5 userdel命令
+
+```
+userdel命令用于删除用户，格式为：userdel [选项] 用户名
+-f	强制删除用户
+-r	同时删除用户及用户家目录
+```
+
+###### 5.1.6 chmod命令
+
+```
+用来设置文件或目录的权限，格式为：chmod [-cfvR] [--help] [--version] mode 文件或目录名称
+
+-c : 若该文件权限确实已经更改，才显示其更改动作
+-f : 若该文件权限无法被更改也不要显示错误讯息
+-v : 显示权限变更的详细资料
+-R : 对目前目录下的所有文件与子目录进行相同的权限变更(即以递回的方式逐个变更)
+--help : 显示辅助说明
+--version : 显示版本
+
+mode:权限设定字串，格式如下 :[ugoa...][[+-=][rwxX]...][,...]
+u 表示该文件的拥有者，g 表示与该文件的拥有者属于同一个群体(group)者，o 表示其他以外的人，a 表示这三者皆是。
++ 表示增加权限、- 表示取消权限、= 表示唯一设定权限。
+r 表示可读取，w 表示可写入，x 表示可执行，X 表示只有当该文件是个子目录或者该文件已经被设定过为可执行。
+
+将文件 file1.txt 设为所有人皆可读取 :
+chmod ugo+r file1.txt
+或
+chmod a+r file1.txt
+
+chmod也可以用数字来表示权限如 :
+语法为：chmod abc file 其中a,b,c各为一个数字，分别表示User、Group、及Other的权限
+如 :
+chmod 777 file
+```
+
+###### 5.1.7 chown命令
+
+```
+设置文件或目录的所有者和所属组。格式为：chown [参数] 所有者:所属组 文件或目录名称
+chown [-cfhvR] [--help] [--version] user[:group] file...
+user : 新的文件拥有者的使用者 ID
+group : 新的文件拥有者的使用者组(group)
+-c : 显示更改的部分的信息
+-f : 忽略错误信息
+-h :修复符号链接
+-v : 显示详细的处理信息
+-R : 处理指定目录以及其子目录下的所有文件
+--help : 显示辅助说明
+--version : 显示版本
+
+[root@linuxprobe ~]# ls -l test
+-rwxrw----. 1 linuxprobe root 15 Feb 11 11:50 test
+[root@linuxprobe ~]# chown root:bin test
+[root@linuxprobe ~]# ls -l test
+-rwxrw----. 1 root bin 15 Feb 11 11:50 test
+```
+
+chmod和chown命令是用于修改文件属性和权限的最常用命令，它们还有一个特别的共性，就是针对目录进行操作时需要加上大写**参数-R来表示递归操作**，即对目录内所有的文件进行整体操作。
+
+##### 5.2 文件权限与归属
+
+Linux系统中一切都是文件，但是文件的类型不相同，因此Linux系统使用了不同的字符来加以区分，常见的字符如下所示。
+
+>  -：普通文件。
+>
+> d：目录文件。
+>
+> l：链接文件。
+>
+> b：块设备文件。
+>
+> c：字符设备文件。
+>
+> p：管道文件。
+
+在Linux系统中，每个文件都有所属的所有者和所有组，并且规定了文件的所有者、所有组以及其他人对文件所拥有的可读（r）、可写（w）、可执行（x）等权限。
+
+一般文件权限比较容易理解：
+
+- “可读”表示能够读取文件的实际内容；
+- “可写”表示能够编辑、新增、修改、删除文件的实际内容；
+- “可执行”则表示能够运行一个脚本程序。
+
+目录文件：
+
+- “可读”表示能够读取目录内的文件列表；
+- “可写”表示能够在目录内新增、删除、重命名文件；
+- “可执行”则表示能够进入该目录。
+
+文件的读、写、执行权限可以简写为**rwx**，亦可分别用数字**4、2、1**来表示，文件**所有者**，**所属组**及**其他用户**权限之间无关联，如表所示：
+
+![权限值](pics\权限值.png)
+
+举例：
+
+现在有这样一个文件，其**所有者**拥有可读、可写、可执行的权限，其文件**所属组**拥有可读、可写的权限；而且**其他人**只有可读的权限。那么，这个文件的权限就是**rwxrw-r--**，数字法表示即为**764**。
+
+##### 5.3 文件的特殊权限
+
+这是一种对文件权限进行设置的特殊功能，可以与一般权限同时使用，以弥补一般权限不能实现的功能。
+
+###### 5.3.1 SUID
+
+SUID是一种对二进制程序进行设置的特殊权限，可以让二进制程序的执行者临时拥有属主的权限（仅对拥有执行权限的二进制程序有效）。
+
+查看passwd命令属性时发现所有者的权限由rwx变成了rws，其中x改变成s就意味着该文件被赋予了SUID权限。另外有读者会好奇，那么如果原本的权限是rw-呢？如果原先权限位上没有x执行权限，那么被赋予特殊权限后将变成大写的S。
+
+```
+[root@linuxprobe ~]# ls -l /etc/shadow
+----------. 1 root root 1004 Jan 3 06:23 /etc/shadow
+[root@linuxprobe ~]# ls -l /bin/passwd
+-rwsr-xr-x. 1 root root 27832 Jan 29 2017 /bin/passwd
+```
+
+###### 5.3.2 SGID
+
+SGID主要实现如下两种功能：
+
+> 让执行者临时拥有属组的权限（对拥有执行权限的二进制程序进行设置）；
+>
+> 在某个目录中创建的文件自动继承该目录的用户组（只可以对目录进行设置）。
+
+每个文件都有其归属的所有者和所属组，当创建或传送一个文件后，这个文件就会自动归属于执行这个操作的用户（即该用户是文件的所有者）。
+
+如果现在需要在一个部门内设置共享目录，让部门内的所有人员都能够读取目录中的内容，那么就可以创建部门共享目录后，在该目录上设置SGID特殊权限位。这样，部门内的任何人员在里面创建的任何文件都会归属于该目录的所属组，而不再是自己的基本用户组。此时，我们用到的就是SGID的第二个功能，即在某个目录中创建的文件自动继承该目录的用户组（只可以对目录进行设置）。
+
+```
+[root@linuxprobe ~]# cd /tmp
+[root@linuxprobe tmp]# mkdir testdir
+[root@linuxprobe tmp]# ls -ald testdir/
+drwxr-xr-x. 2 root root 6 Feb 11 11:50 testdir/
+[root@linuxprobe tmp]# chmod -Rf 777 testdir/
+[root@linuxprobe tmp]# chmod -Rf g+s testdir/
+[root@linuxprobe tmp]# ls -ald testdir/
+drwxrwsrwx. 2 root root 6 Feb 11 11:50 testdir/
+```
+
+在使用上述命令设置好目录的777权限（确保普通用户可以向其中写入文件），并为该目录设置了SGID特殊权限位后，就可以切换至一个普通用户，然后尝试在该目录中创建文件，并查看新创建的文件是否会继承新创建的文件所在的目录的所属组名称：
+
+```
+[root@linuxprobe tmp]# su - linuxprobe
+Last login: Wed Feb 11 11:49:16 CST 2017 on pts/0
+[linuxprobe@linuxprobe ~]$ cd /tmp/testdir/
+[linuxprobe@linuxprobe testdir]$ echo "linuxprobe.com" > test
+[linuxprobe@linuxprobe testdir]$ ls -al test
+-rw-rw-r--. 1 linuxprobe root 15 Feb 11 11:50 test
+```
+
+###### 5.3.3 SBIT
+
+当对某个目录设置了SBIT（Sticky Bit）粘滞位权限后，那么该目录中的文件就只能被其所有者执行删除操作了。
+
+与前面所讲的SUID和SGID权限显示方法不同，当目录被设置SBIT特殊权限位后，文件的其他人权限部分的x执行权限就会被替换成t或者T，原本有x执行权限则会写成t，原本没有x执行权限则会被写成T。
+
+```
+[root@linuxprobe tmp]# su - linuxprobe
+Last login: Wed Feb 11 12:41:20 CST 2017 on pts/0
+[linuxprobe@linuxprobe tmp]$ ls -ald /tmp
+drwxrwxrwt. 17 root root 4096 Feb 11 13:03 /tmp
+[linuxprobe@linuxprobe ~]$ cd /tmp
+[linuxprobe@linuxprobe tmp]$ ls -ald
+drwxrwxrwt. 17 root root 4096 Feb 11 13:03 .
+[linuxprobe@linuxprobe tmp]$ echo "Welcome to linuxprobe.com" > test
+[linuxprobe@linuxprobe tmp]$ chmod 777 test
+[linuxprobe@linuxprobe tmp]$ ls -al test 
+-rwxrwxrwx. 1 linuxprobe linuxprobe 10 Feb 11 12:59 test
+```
+
+我们切换到另外一个普通用户，然后尝试删除这个其他人创建的文件就会发现，即便读、写、执行权限全开，但是由于SBIT特殊权限位的缘故，依然无法删除该文件：
+
+```
+[root@linuxprobe tmp]# su - blackshield
+Last login: Wed Feb 11 12:41:29 CST 2017 on pts/1
+[blackshield@linuxprobe ~]$ cd /tmp
+[blackshield@linuxprobe tmp]$ rm -f test
+rm: cannot remove ‘test’: Operation not permitted
+```
+
+要是也想对其他目录来设置SBIT特殊权限位，用chmod命令就可以了。对应的参数o+t代表设置SBIT粘滞位权限：
+
+```
+[blackshield@linuxprobe tmp]$ exit
+Logout
+[root@linuxprobe tmp]# cd ~
+[root@linuxprobe ~]# mkdir linux
+[root@linuxprobe ~]# chmod -R o+t linux/
+[root@linuxprobe ~]# ls -ld linux/
+drwxr-xr-t. 2 root root 6 Feb 11 19:34 linux/
+```
+
+##### 5.4 文件的隐藏属性
+
+Linux系统中的文件除了具备一般权限和特殊权限之外，还有一种隐藏权限，即被隐藏起来的权限，默认情况下不能直接被用户发觉。这在一定程度上阻止了黑客篡改系统日志的图谋，因此这种“奇怪”的文件也保障了Linux系统的安全性。
+
+###### 5.4.1 chattr命令
+
+chattr命令用于设置文件的隐藏权限，格式为“chattr [参数] 文件”。如果想要把某个隐藏功能添加到文件上，则需要在命令后面追加“+参数”，如果想要把某个隐藏功能移出文件，则需要追加“-参数”。
+
+```
+i	无法对文件进行修改；若对目录设置了该参数，则仅能修改其中的子文件内容而不能新建或删除文件
+a	仅允许补充（追加）内容，无法覆盖/删除内容（Append Only）
+S	文件内容在变更后立即同步到硬盘（sync）
+s	彻底从硬盘中删除，不可恢复（用0填充原文件所在硬盘区域）
+A	不再修改这个文件或目录的最后访问时间（atime）
+b	不再修改文件或目录的存取时间
+D	检查压缩文件中的错误
+d	使用dump命令备份时忽略本文件/目录
+c	默认将文件或目录进行压缩
+u	当删除该文件后依然保留其在硬盘中的数据，方便日后恢复
+t	让文件系统支持尾部合并（tail-merging）
+x	可以直接访问压缩文件中的内容
+```
+
+我们先来创建一个普通文件，然后立即尝试删除（这个操作肯定会成功）：
+
+```
+[root@linuxprobe ~]# echo "for Test" > linuxprobe
+[root@linuxprobe ~]# rm linuxprobe
+rm: remove regular file ‘linuxprobe’? y
+```
+
+实践是检验真理的唯一标准。如果您没有亲眼见证过隐藏权限强大功能的美妙，就一定不会相信原来Linux系统会如此安全。接下来我们再次新建一个普通文件，并为其设置不允许删除与覆盖（+a参数）权限，然后再尝试将这个文件删除：
+
+```
+[root@linuxprobe ~]# echo "for Test" > linuxprobe
+[root@linuxprobe ~]# chattr +a linuxprobe
+[root@linuxprobe ~]# rm linuxprobe
+rm: remove regular file ‘linuxprobe’? y
+rm: cannot remove ‘linuxprobe’: Operation not permitted
+```
+
+###### 5.4.2 lsattr命令
+
+lsattr命令用于显示文件的隐藏权限，格式为“lsattr [参数] 文件
+
+一旦使用lsattr命令后，文件上被赋予的隐藏权限马上就会原形毕露。此时可以按照显示的隐藏权限的类型（字母），使用chattr命令将其去掉：
+
+```
+[root@linuxprobe ~]# lsattr linuxprobe
+-----a---------- linuxprobe
+[root@linuxprobe ~]# chattr -a linuxprobe
+[root@linuxprobe ~]# lsattr linuxprobe 
+---------------- linuxprobe
+[root@linuxprobe ~]# rm linuxprobe 
+rm: remove regular file ‘linuxprobe’? y
+```
+
+##### 5.5 文件访问控制列表
+
+前文讲解的一般权限、特殊权限、隐藏权限其实有一个共性—权限是针对某一类用户设置的。如果**希望对某个指定的用户进行单独的权限控制，就需要用到文件的访问控制列表（ACL）**了。
+
+基于普通文件或目录设置ACL其实就是针对指定的用户或用户组设置文件或目录的操作权限。
+
+- 如果针对某个目录设置了ACL，则目录中的文件会继承其ACL；
+
+- 若针对文件设置了ACL，则文件不再继承其所在目录的ACL。
+
+测试：
+
+我们先切换到普通用户，然后尝试进入root管理员的家目录中。在没有针对普通用户对root管理员的家目录设置ACL之前，其执行结果如下所示：
+
+```
+[root@linuxprobe ~]# su - linuxprobe
+Last login: Sat Mar 21 16:31:19 CST 2017 on pts/0
+[linuxprobe@linuxprobe ~]$ cd /root
+-bash: cd: /root: Permission denied
+[linuxprobe@linuxprobe root]$ exit
+```
+
+###### 5.5.1 setfacl命令
+
+setfacl命令用于管理文件的ACL规则，格式为：setfacl [参数] 文件名称
+
+文件的ACL提供的是在所有者、所属组、其他人的读/写/执行权限之外的**特殊权限控制**，使用setfacl命令可以针对**单一用户**或**用户组**、**单一文件**或**目录**来进行读/写/执行**权限的控制**。
+
+-R		针对目录文件的递归参数
+
+-m		针对普通文件
+
+-b		删除某个文件的ACL
+
+下面来设置用户在/root目录上的权限：
+
+```
+[root@linuxprobe ~]# setfacl -Rm u:linuxprobe:rwx /root
+[root@linuxprobe ~]# su - linuxprobe
+Last login: Sat Mar 21 15:45:03 CST 2017 on pts/1
+[linuxprobe@linuxprobe ~]$ cd /root
+[linuxprobe@linuxprobe root]$ ls
+anaconda-ks.cfg Downloads Pictures Public
+[linuxprobe@linuxprobe root]$ cat anaconda-ks.cfg
+[linuxprobe@linuxprobe root]$ exit
+```
+
+常用的ls命令是看不到ACL表信息的，但是却可以看到文件的权限最后一个点（**.**）变成了加号（**+**）,这就意味着该文件已经设置了ACL了
+
+```
+[root@linuxprobe ~]# ls -ld /root
+dr-xrwx---+ 14 root root 4096 May 4 2017 /root
+```
+
+###### 5.5.2 getfacl命令
+
+getfacl命令用于显示文件上设置的ACL信息，格式为：getfacl 文件名称
+
+下面使用getfacl命令显示在root管理员家目录上设置的所有ACL信息。
+
+```
+[root@linuxprobe ~]# getfacl /root
+getfacl: Removing leading '/' from absolute path names
+# file: root
+# owner: root
+# group: root
+user::r-x
+user:linuxprobe:rwx
+group::r-x
+mask::rwx
+other::---
+```
+
+##### 5.6 su命令与sudo服务
 
