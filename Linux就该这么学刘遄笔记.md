@@ -2,8 +2,6 @@ Linux运维工程师从0基础到实践 20课（小时）
 
 [TOC]
 
-
-
 ### 第0章 学习方法和红帽系统
 
 ##### 许可证
@@ -1984,7 +1982,7 @@ esac
   - 计划任务中的“分”字段必须有数值，绝对不能为空或是*号，而“日”和“星期”字段不能同时使用，否则就会发生冲突。
   ```
 
-### 第五章 用户沈芬芬与文件权限
+### 第五章 用户身份与文件权限
 
 本章将详细讲解文件的**所有者**、**所属组**以及**其他人**可对文件进行的**读（r）、写（w）、执行（x）**等操作
 
@@ -2074,6 +2072,17 @@ uid=1000(linuxprobe) gid=1000(linuxprobe) groups=1000(linuxprobe),0(root)
 [root@linuxprobe ~]# usermod -u 8888 linuxprobe
 [root@linuxprobe ~]# id linuxprobe
 uid=8888(linuxprobe) gid=1000(linuxprobe) groups=1000(linuxprobe),0(root)
+
+重新指定用户的家目录并自动把旧的数据转移过去，使用：usermod -d 新家目录 -m 登录名
+[root@centos ~]$ ls /home/
+kekcentos  linux  
+[root@centos ~]# ls /home/linux/
+sdf.txt  下载  公共  图片  文档  桌面  模板  视频  音乐
+[root@centos ~]# usermod -d /home/linuxprobe -m linuxprobe 
+[root@centos ~]# ls /home/
+kekcentos  linuxprobe 
+[root@centos ~]# ls /home/linuxprobe/
+sdf.txt  下载  公共  图片  文档  桌面  模板  视频  音乐
 ```
 
 ###### 5.1.4. passwd命令
@@ -2126,18 +2135,20 @@ userdel命令用于删除用户，格式为：userdel [选项] 用户名
 
 ```
 用来设置文件或目录的权限，格式为：chmod [-cfvR] [--help] [--version] mode 文件或目录名称
+是“change mode”的缩写，直译”改变模式“，改变模式是指改变用户对文件或则目录的访问模式（权限），主体对象是文件或目录，针对某一个文件或则目录给某一个用户添加权限或移除权限。
 
--c : 若该文件权限确实已经更改，才显示其更改动作
--f : 若该文件权限无法被更改也不要显示错误讯息
--v : 显示权限变更的详细资料
--R : 对目前目录下的所有文件与子目录进行相同的权限变更(即以递回的方式逐个变更)
+-c (--change): 若该文件权限确实已经更改，才显示其更改动作
+-f (--silent,--quiet): 若该文件权限无法被更改也不要显示错误讯息
+-v (--verbose): 显示权限变更的详细资料
+-R (--recursive): 对目前目录下的所有文件与子目录进行相同的权限变更(即以递回的方式逐个变更)
 --help : 显示辅助说明
 --version : 显示版本
 
-mode:权限设定字串，格式如下 :[ugoa...][[+-=][rwxX]...][,...]
-u 表示该文件的拥有者，g 表示与该文件的拥有者属于同一个群体(group)者，o 表示其他以外的人，a 表示这三者皆是。
+mode:权限设定字串，
+一是文字设定法：格式如下 :[ugoa...][[+-=][rwxX]...][,...]
+u(user) 表示该文件的拥有者，g(group)表示与该文件的拥有者属于同一个群体，o(others)表示其他以外的人，a(all)表示这三者皆是。
 + 表示增加权限、- 表示取消权限、= 表示唯一设定权限。
-r 表示可读取，w 表示可写入，x 表示可执行，X 表示只有当该文件是个子目录或者该文件已经被设定过为可执行。
+r 表示可读取，w 表示可写入，x 表示可执行, s 特殊权限，X 表示只有当该文件是个子目录或者该文件已经被设定过为可执行。
 
 将文件 file1.txt 设为所有人皆可读取 :
 chmod ugo+r file1.txt
@@ -2155,13 +2166,14 @@ chmod 777 file
 ```
 设置文件或目录的所有者和所属组。格式为：chown [参数] 所有者:所属组 文件或目录名称
 chown [-cfhvR] [--help] [--version] user[:group] file...
+change file owner and group
 user : 新的文件拥有者的使用者 ID
 group : 新的文件拥有者的使用者组(group)
--c : 显示更改的部分的信息
--f : 忽略错误信息
--h :修复符号链接
--v : 显示详细的处理信息
--R : 处理指定目录以及其子目录下的所有文件
+-c (--changes): 显示更改的部分的信息
+-f (--slient,--quiet): 忽略错误信息
+-h (--no-dereference):修复符号链接
+-v (--verbose): 显示详细的处理信息
+-R (--recursive): 处理指定目录以及其子目录下的所有文件
 --help : 显示辅助说明
 --version : 显示版本
 
@@ -2180,15 +2192,19 @@ Linux系统中一切都是文件，但是文件的类型不相同，因此Linux�
 
 >  -：普通文件。
 >
-> d：目录文件。
+>  d：目录文件。
 >
-> l：链接文件。
+>  l：链接文件。
 >
-> b：块设备文件。
+>  b：块设备文件。
 >
-> c：字符设备文件。
+>  c：字符设备文件。
 >
-> p：管道文件。
+>  p：管道文件。
+
+如：下面的一个文件
+[root@centos ~]# ll initial-setup-ks.cfg 
+-rw-r--r--. 1 root root 1977 Jan 24 23:57 initial-setup-ks.cfg
 
 在Linux系统中，每个文件都有所属的所有者和所有组，并且规定了文件的所有者、所有组以及其他人对文件所拥有的可读（r）、可写（w）、可执行（x）等权限。
 
@@ -2218,7 +2234,7 @@ Linux系统中一切都是文件，但是文件的类型不相同，因此Linux�
 
 ###### 5.3.1 SUID
 
-SUID是一种对二进制程序进行设置的特殊权限，可以让二进制程序的执行者临时拥有属主的权限（仅对拥有执行权限的二进制程序有效）。
+SUID（super user ID）是一种对二进制程序进行设置的特殊权限，可以让**二进制程序**的执行者**临时拥有属主的权限**（仅对拥有执行权限的二进制程序有效）。
 
 查看passwd命令属性时发现所有者的权限由rwx变成了rws，其中x改变成s就意味着该文件被赋予了SUID权限。另外有读者会好奇，那么如果原本的权限是rw-呢？如果原先权限位上没有x执行权限，那么被赋予特殊权限后将变成大写的S。
 
@@ -2231,20 +2247,24 @@ SUID是一种对二进制程序进行设置的特殊权限，可以让二进制�
 
 ###### 5.3.2 SGID
 
-SGID主要实现如下两种功能：
+SGID（super group ID）主要实现如下两种功能：
 
-> 让执行者临时拥有属组的权限（对拥有执行权限的二进制程序进行设置）；
+> 让执行者**临时拥有属组的权限**（对拥有执行权限的**二进制程序**进行设置）；
 >
-> 在某个目录中创建的文件自动继承该目录的用户组（只可以对目录进行设置）。
+> 在某个**目录中创建的文件自动继承该目录的用户组**（只可以对**目录**进行设置）。
+
+一般情况：
 
 每个文件都有其归属的所有者和所属组，当创建或传送一个文件后，这个文件就会自动归属于执行这个操作的用户（即该用户是文件的所有者）。
+
+目录设置SGID权限后：
 
 如果现在需要在一个部门内设置共享目录，让部门内的所有人员都能够读取目录中的内容，那么就可以创建部门共享目录后，在该目录上设置SGID特殊权限位。这样，部门内的任何人员在里面创建的任何文件都会归属于该目录的所属组，而不再是自己的基本用户组。此时，我们用到的就是SGID的第二个功能，即在某个目录中创建的文件自动继承该目录的用户组（只可以对目录进行设置）。
 
 ```
 [root@linuxprobe ~]# cd /tmp
 [root@linuxprobe tmp]# mkdir testdir
-[root@linuxprobe tmp]# ls -ald testdir/
+[root@linuxprobe tmp]# ls -ald testdir/			（ls的 -d参数 列出目录本身，而不是它的内容）
 drwxr-xr-x. 2 root root 6 Feb 11 11:50 testdir/
 [root@linuxprobe tmp]# chmod -Rf 777 testdir/
 [root@linuxprobe tmp]# chmod -Rf g+s testdir/
@@ -2265,7 +2285,7 @@ Last login: Wed Feb 11 11:49:16 CST 2017 on pts/0
 
 ###### 5.3.3 SBIT
 
-当对某个目录设置了SBIT（Sticky Bit）粘滞位权限后，那么该目录中的文件就只能被其所有者执行删除操作了。
+当**对**某个**目录**设置了SBIT（Sticky Bit）粘滞位权限后，那么该目录中的文件就只能被其所有者执行删除操作了。
 
 与前面所讲的SUID和SGID权限显示方法不同，当目录被设置SBIT特殊权限位后，文件的其他人权限部分的x执行权限就会被替换成t或者T，原本有x执行权限则会写成t，原本没有x执行权限则会被写成T。
 
@@ -2303,6 +2323,35 @@ Logout
 [root@linuxprobe ~]# chmod -R o+t linux/
 [root@linuxprobe ~]# ls -ld linux/
 drwxr-xr-t. 2 root root 6 Feb 11 19:34 linux/
+```
+
+###### 5.3.4 SUID，SGID，SBIT总结
+
+```
+用数字来表示权限：
+4表示SUID
+2表示SGID
+1表示SBIT
+如果两个或三个权限同时存在时，就将者写权限的值相加就是需要的结果了，例如：增加SUID和SGID权限
+chmod 4777 test
+
+用字母添加SUID权限（只能对二进制文件设置，让其它人拥有所有者权限）
+	设置后owner的"x-->s"
+	-rwsr-xr-x. 1 root root 27832 Jan 29 2017 /bin/passwd
+	
+用字母添加SGID权限（对目录设置，让其它人也拥有当前组的权限）（对二进制文件，让others拥有组权限）
+chmod -Rf g+s testdir/   
+	设置后group的"x-->s"
+    -r-xr-xr-x   1 bin system 59346 Feb 11 2017  ps
+    变为
+    -r-xr-sr-x   1 bin system 59346 Feb 11 2017  ps
+
+用字母添加SBIT属性（只能对目录设置，让目录中的文件只能被所有者删除）
+[root@linuxprobe ~]# chmod -R o+t linux/
+	设置后others的"x-->t"
+	drwxrwxrwx.  30 root root  4096 Feb 17 13:40 testdir
+    变为
+    drwxrwxrwt.  30 root root  4096 Feb 17 13:40 testdir
 ```
 
 ##### 5.4 文件的隐藏属性
@@ -2414,6 +2463,33 @@ anaconda-ks.cfg Downloads Pictures Public
 ```
 [root@linuxprobe ~]# ls -ld /root
 dr-xrwx---+ 14 root root 4096 May 4 2017 /root
+[linuxprobe@centos /]$ getfacl /root
+getfacl: Removing leading '/' from absolute path names
+# file: root
+# owner: root
+# group: root
+user::r-x
+user:linuxprobe:rwx
+group::r-x
+mask::r-x
+other::---
+```
+
+删除ACL
+
+```
+[root@centos /]# setfacl -b /root/
+[root@linuxprobe ~]# ls -ld /root
+dr-xrwx---. 14 root root 4096 May 4 2017 /root
+[linuxprobe@centos /]$ getfacl /root
+getfacl: Removing leading '/' from absolute path names
+# file: root
+# owner: root
+# group: root
+user::r-x
+group::r-x
+mask::r-x
+other::---
 ```
 
 ###### 5.5.2 getfacl命令
@@ -2437,3 +2513,359 @@ other::---
 
 ##### 5.6 su命令与sudo服务
 
+###### 5.6.1su命令不退出登录切换用户
+
+可以解决切换用户身份的需求，使得当前用户在不退出登录的情况下，顺畅地切换到其他用户。
+
+```
+[root@linuxprobe ~]# id 
+uid=0(root) gid=0(root) groups=0(root)
+[root@linuxprobe ~]# su - linuxprobe
+Last login: Wed Jan 4 01:17:25 EST 2017 on pts/0
+[linuxprobe@linuxprobe ~]$ id 
+uid=1000(linuxprobe) gid=1000(linuxprobe) groups=1000(linuxprobe) context=unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023
+```
+
+su命令与用户名之间有一个减号（-），这意味着完全切换到新的用户，即把环境变量信息也变更为新用户的相应信息，而不是保留原始的信息。强烈建议在切换用户身份时添加这个减号（-）。
+
+###### 5.6.2 使用sudo命令把特定命令的执行权限赋予给指定用户
+
+合理配置sudo服务，以便兼顾系统的安全性和用户的便捷性。
+
+sudo服务的配置原则也很简单—在保证普通用户完成相应工作的前提下，尽可能少地赋予额外的权限。
+
+```
+-h	列出帮助信息
+-l	列出当前用户可执行的命令
+-u 用户名或UID值	以指定的用户身份执行命令
+-k	清空密码的有效时间，下次执行sudo时需要再次进行密码验证
+-b	在后台执行指定的命令
+-p	更改询问密码的提示语
+```
+
+总结来说，sudo命令具有如下功能：
+
+> 限制用户执行指定的命令：
+>
+> 记录用户执行的每一条命令；
+>
+> 配置文件（/etc/sudoers）提供集中的用户管理、权限与主机等参数；
+>
+> 验证密码的后5分钟内（默认值）无须再让用户再次验证密码。
+
+可以使用sudo命令提供的visudo命令来配置用户权限。这条命令在配置用户权限时将禁止多个用户同时修改sudoers配置文件，还可以对配置文件内的参数进行语法检查，并在发现参数错误时进行报错。
+
+> 只有root管理员才可以使用visudo命令编辑sudo服务的配置文件。
+
+在sudo命令的配置文件中，按照下面的格式将第99行（大约）填写上指定的信息：
+
+> **谁可以使用  允许使用的主机=（以谁的身份）  可执行命令的列表**
+
+```
+[root@linuxprobe ~]# visudo
+ 96 ##
+ 97 ## Allow root to run any commands anywhere
+ 98 root ALL=(ALL) ALL
+ 99 linuxprobe ALL=(ALL) ALL
+```
+
+在填写完毕后记得要先保存再退出，然后切换至指定的普通用户身份，此时就可以用sudo -l命令查看到所有可执行的命令了（下面的命令中，验证的是该普通用户的密码，而不是root管理员的密码，请读者不要搞混了）：
+
+```
+[root@linuxprobe ~]# su - linuxprobe
+Last login: Thu Sep 3 15:12:57 CST 2017 on pts/1
+[linuxprobe@linuxprobe ~]$ sudo -l
+[sudo] password for linuxprobe:此处输入linuxprobe用户的密码
+Matching Defaults entries for linuxprobe on this host:
+requiretty, !visiblepw, always_set_home, env_reset, env_keep="COLORS
+DISPLAY HOSTNAME HISTSIZE INPUTRC KDEDIR LS_COLORS", env_keep+="MAIL PS1
+PS2 QTDIR USERNAME LANG LC_ADDRESS LC_CTYPE", env_keep+="LC_COLLATE
+LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES", env_keep+="LC_MONETARY
+LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE", env_keep+="LC_TIME LC_ALL
+LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY",
+secure_path=/sbin\:/bin\:/usr/sbin\:/usr/bin
+User linuxprobe may run the following commands on this host:
+(ALL) ALL
+```
+
+接下来是见证奇迹的时刻！作为一名普通用户，是肯定不能看到root管理员的家目录（/root）中的文件信息的，但是，只需要在想执行的命令前面加上sudo命令就可以了：
+
+```
+[linuxprobe@linuxprobe ~]$ ls /root
+ls: cannot open directory /root: Permission denied
+[linuxprobe@linuxprobe ~]$ sudo ls /root
+anaconda-ks.cfg Documents initial-setup-ks.cfg Pictures Templates
+Desktop Downloads Music Public Videos
+```
+
+考虑到生产环境中不允许某个普通用户拥有整个系统中所有命令的最高执行权（这也不符合前文提到的权限赋予原则，即尽可能少地赋予权限），因此ALL参数就有些不合适了。因此只能赋予普通用户具体的命令以满足工作需求，这也受到了必要的权限约束。如果需要让某个用户只能使用root管理员的身份执行指定的命令，切记一定要给出该命令的绝对路径，否则系统会识别不出来。我们可以先使用whereis命令找出命令所对应的保存路径，然后把配置文件第99行的用户权限参数修改成对应的路径即可：
+
+```
+[linuxprobe@linuxprobe ~]$ exit
+logout
+[root@linuxprobe ~]# whereis cat
+cat: /usr/bin/cat /usr/share/man/man1/cat.1.gz /usr/share/man/man1p/cat.1p.gz
+[root@linuxprobe ~]# visudo
+ 96 ##
+ 97 ## Allow root to run any commands anywhere
+ 98 root ALL=(ALL) ALL
+ 99 linuxprobe ALL=(ALL) /usr/bin/cat
+```
+
+在编辑好后依然是先保存再退出。再次切换到指定的普通用户，然后尝试正常查看某个文件的内容，此时系统提示没有权限。这时再使用sudo命令就可以顺利地查看文件内容了：
+
+```
+[root@linuxprobe ~]# su - linuxprobe
+Last login: Thu Sep 3 15:51:01 CST 2017 on pts/1
+[linuxprobe@linuxprobe ~]$ cat /etc/shadow
+cat: /etc/shadow: Permission denied
+[linuxprobe@linuxprobe ~]$ sudo cat /etc/shadow
+root:$6$GV3UVtX4ZGg6ygA6$J9pBuPGUSgZslj83jyoI7ThJla9ZAULku3BcncAYF00Uwk6Sqc4E36MnD1hLtlG9QadCpQCNVJs/5awHd0/pi1:16626:0:99999:7:::
+bin:*:16141:0:99999:7:::
+daemon:*:16141:0:99999:7:::
+adm:*:16141:0:99999:7:::
+lp:*:16141:0:99999:7:::
+sync:*:16141:0:99999:7:::
+shutdown:*:16141:0:99999:7:::
+halt:*:16141:0:99999:7:::
+mail:*:16141:0:99999:7:::
+operator:*:16141:0:99999:7:::
+games:*:16141:0:99999:7:::
+ftp:*:16141:0:99999:7:::
+nobody:*:16141:0:99999:7:::
+………………省略部分文件内容………………
+```
+
+不知大家是否发觉在每次执行sudo命令后都会要求验证一下密码。虽然这个密码就是当前登录用户的密码，但是每次执行sudo命令都要输入一次密码其实也挺麻烦的，这时可以添加NOPASSWD参数，使得用户执行sudo命令时不再需要密码验证：
+
+```
+[linuxprobe@linuxprobe ~]$ exit
+logout
+[root@linuxprobe ~]# whereis poweroff
+poweroff: /usr/sbin/poweroff /usr/share/man/man8/poweroff.8.gz
+[root@linuxprobe ~]# visudo
+ 96 ##
+ 97 ## Allow root to run any commands anywhere
+ 98 root ALL=(ALL) ALL
+ 99 linuxprobe ALL=NOPASSWD: /usr/sbin/poweroff
+```
+
+这样，当切换到普通用户后再执行命令时，就不用再频繁地验证密码了，我们在日常工作中也就痛快至极了。
+
+```
+[root@linuxprobe ~]# su - linuxprobe
+Last login: Thu Sep 3 15:58:31 CST 2017 on pts/1
+[linuxprobe@linuxprobe ~]$ poweroff
+User root is logged in on seat0.
+Please retry operation after closing inhibitors and logging out other users.
+Alternatively, ignore inhibitors and users with 'systemctl poweroff -i'.
+[linuxprobe@linuxprobe ~]$ sudo poweroff
+```
+
+### 第六章 存储结构与磁盘划分
+
+> Linux系统中的文件存储结构 
+>
+> 文件系统层次化标准（FHS，Filesystem Hierarchy Standard）
+>
+> udev硬件命名规则 硬盘分区的规划方法
+>
+> 详细地分析Linux系统中最常见的Ext3、Ext4与XFS文件系统的不同之处
+>
+> 着重练习硬盘设备分区、格式化以及挂载等常用的硬盘管理操作，以便熟练掌握文件系统的使用方法
+>
+> 完整地部署SWAP交换分区
+>
+> 配置quota磁盘配额服务
+>
+> 掌握ln命令带来的软硬链接
+
+##### 6.1 一切从"/"开始
+
+###### **文件**
+
+在Linux系统中，目录、字符设备、块设备、套接字、打印机等都被抽象成了文件，Linux系统中一切都是文件。
+
+在Linux系统中并不存在C/D/E/F等盘符，Linux系统中的一切文件都是从“根（/）”目录开始的，并按照文件系统层次化标准（FHS）采用树形结构来存放文件，以及定义了常见目录的用途。
+
+Linux系统中的文件和目录名称是严格区分大小写的，并且文件名称中不得包含斜杠（/）。
+
+![Linux存储架构](pics\Linux存储架构.png)
+
+```
+/boot	开机所需文件—内核、开机菜单以及所需配置文件等
+/dev	以文件形式存放任何设备与接口
+/etc	配置文件
+/home	用户主目录
+/bin	存放单用户模式下还可以操作的命令
+/lib	开机时用到的函数库，以及/bin与/sbin下面的命令要调用的函数
+/sbin	开机过程中需要的命令
+/media	用于挂载设备文件的目录
+/opt	放置第三方的软件
+/root	系统管理员的家目录
+/srv	一些网络服务的数据文件目录
+/tmp	任何人均可使用的“共享”临时目录
+/proc	虚拟文件系统，例如系统内核、进程、外部设备及网络状态等
+/usr/local	用户自行安装的软件
+/usr/sbin	Linux系统开机时不会使用到的软件/命令/脚本
+/usr/share	帮助与说明文件，也可放置共享文件
+/var	主要存放经常变化的文件，如日志
+/lost+found	当文件系统发生错误时，将一些丢失的文件片段存放在这里
+```
+
+###### **路径**
+
+> **绝对路径（absolute path）:**指的是从根目录（/）开始写起的文件或目录名称。
+>
+> **相对路径（relative path）:**指的是相对于当前路径的写法
+
+##### 6.2 物理设备的命名规则
+
+###### 系统内核中的udev设备管理器的硬件名称规范
+
+```
+IDE设备			/dev/hd[a-d]
+SCSI/SATA/U盘	 /dev/sd[a-p]
+软驱				/dev/fd[0-1]
+打印机			   /dev/lp[0-15]
+光驱				/dev/cdrom
+鼠标				/dev/mouse
+磁带机			   /dev/st0或/dev/ht0
+```
+
+一台主机上可以有多块硬盘，系统采用a～p来代表16块不同的硬盘（默认从a开始分配）
+
+###### 硬盘的分区编号：
+
+> 主分区或扩展分区的编号从1开始，到4结束；
+>
+> 逻辑分区从编号5开始。
+
+分析一下/dev/sda5这个设备文件名称包含哪些信息，如图：
+
+![硬盘命名规则](pics\硬盘命名规则.png)
+
+###### 硬盘分区相关知识
+
+```
+硬盘设备是由大量的扇区组成的，每个扇区的容量为512字节。
+其中第一个扇区最重要，它里面保存着主引导记录与分区表信息。
+就第一个扇区来讲，主引导记录需要占用446字节，分区表为64字节，结束符占用2字节；
+其中分区表中每记录一个分区信息就需要16字节，这样一来最多只有4个分区信息可以写到第一个扇区中，这4个分区就是4个主分区。第一个扇区中的数据信息如图
+```
+
+![硬盘的扇区](pics\硬盘的扇区.png)
+
+```
+第一个扇区最多只能创建出4个分区？于是为了解决分区个数不够的问题，可以将第一个扇区的分区表中16字节（原本要写入主分区信息）的空间（称之为扩展分区）拿出来指向另外一个分区。也就是说，扩展分区其实并不是一个真正的分区，而更像是一个占用16字节分区表空间的指针—一个指向另外一个分区的指针。
+
+因此，用户一般会选择使用3个主分区加1个扩展分区的方法，然后在扩展分区中创建出数个逻辑分区，从而来满足多分区（大于4个）的需求。当然，就目前来讲大家只要明白为什么主分区不能超过4个就足够了。主分区、扩展分区、逻辑分区可以像下图那样来规划。
+```
+
+![逻辑分区](pics\逻辑分区.png)
+
+##### 6.3 文件系统与数据资料
+
+###### 文件系统
+
+Linux系统支持数十种的文件系统，而最常见的文件系统如下所示。
+
+**Ext3**：是一款日志文件系统，能够在系统异常宕机时避免文件系统资料丢失，并能自动修复数据的不一致与错误。然而，当硬盘容量较大时，所需的修复时间也会很长，而且也不能百分之百地保证资料不会丢失。它会把整个磁盘的每个写入动作的细节都预先记录下来，以便在发生异常宕机后能回溯追踪到被中断的部分，然后尝试进行修复。
+
+**Ext4**：Ext3的改进版本，作为RHEL 6系统中的默认文件管理系统，它支持的存储容量高达1EB（1EB=1,073,741,824GB），且能够有无限多的子目录。另外，Ext4文件系统能够批量分配block块，从而极大地提高了读写效率。
+
+**XFS**：是一种高性能的日志文件系统，而且是RHEL 7中默认的文件管理系统，它的优势在发生意外宕机后尤其明显，即可以快速地恢复可能被破坏的文件，而且强大的日志功能只用花费极低的计算和存储性能。并且它最大可支持的存储容量为18EB，这几乎满足了所有需求。
+
+###### 硬盘分区并格式化后文件的存储方式inode表格block、实际内容block
+
+Linux系统中有一个名为super block的“硬盘地图”。Linux并不是把文件内容直接写入到这个“硬盘地图”里面，而是在里面记录着整个文件系统的信息。因为如果把所有的文件内容都写入到这里面，它的体积将变得非常大，而且文件内容的查询与写入速度也会变得很慢。Linux只是把每个文件的权限与属性记录在inode中，而且每个文件占用一个独立的**inode表格**，该表格的大小默认为128字节，里面记录着如下信息：
+
+> 该文件的访问权限（read、write、execute）；
+>
+> 该文件的所有者与所属组（owner、group）；
+>
+> 该文件的大小（size）；
+>
+> 该文件的创建或内容修改时间（ctime）；
+>
+> 该文件的最后一次访问时间（atime）；
+>
+> 该文件的修改时间（mtime）；
+>
+> 文件的特殊权限（SUID、SGID、SBIT）；
+>
+> 该文件的真实数据地址（point）。
+
+而文件的**实际内容**则保存在**block**块中（大小可以是1KB、2KB或4KB），一个inode的默认大小仅为128B（Ext3），记录一个block则消耗4B。当文件的inode被写满后，Linux系统会自动分配出一个block块，专门用于像**inode**那样记录其他**block**块的信息，这样把各个block块的内容串到一起，就能够让用户读到完整的文件内容了。对于存储文件内容的block块，有下面两种常见情况（以4KB的block大小为例进行说明）。
+
+> 情况1：文件很小（1KB），但依然会占用一个block，因此会潜在地浪费3KB。
+>
+> 情况2：文件很大（5KB），那么会占用两个block（5KB-4KB后剩下的1KB也要占用一个block）。
+
+###### VFS（Virtual File System，虚拟文件系统）
+
+众多的文件系统，为了使用户在读取或写入文件时不用关心底层的硬盘结构，Linux内核中的软件层为用户程序提供了一个VFS（Virtual File System，虚拟文件系统）接口，这样用户实际上在操作文件时就是统一对这个虚拟文件系统进行操作了。
+
+![虚拟文件系统VFS](pics\虚拟文件系统VFS.png)
+
+##### 6.4 挂载硬件设备
+
+当用户需要使用硬盘设备或分区中的数据时，需要先将其与一个已存在的目录文件进行关联，而这个关联动作就是“挂载”。
+
+###### mount命令
+
+用于挂载文件系统，格式为“mount 文件系统 挂载目录”。
+
+-a	挂载所有在/etc/fstab中定义的文件系统
+-t	指定文件系统的类型
+
+例如，要把设备/dev/sdb2挂载到/backup目录，只需要在mount命令中填写设备与挂载目录参数就行，系统会自动去判断要挂载文件的类型，因此只需要执行下述命令即可：
+
+```
+[root@linuxprobe ~]# mount /dev/sdb2 /backup
+```
+
+###### /etc/fstab文件
+
+虽然按照上面的方法执行mount命令后就能立即使用文件系统了，但系统在重启后挂载就会失效，也就是说我们需要每次开机后都手动挂载一下。这肯定不是我们想要的效果，如果想让硬件设备和目录永久地进行自动关联，就必须把挂载信息按照指定的填写格式
+
+```
+“设备文件 挂载目录 格式类型 权限选项 是否备份 是否自检”
+```
+
+写入到/etc/fstab文件中。
+
+```
+设备文件		一般为设备的路径+设备名称，也可以写唯一识别码（UUID，Universally Unique Identifier）
+挂载目录		指定要挂载到的目录，需在挂载前创建好
+格式类型		指定文件系统的格式，比如Ext3、Ext4、XFS、SWAP、iso9660（此为光盘设备）等
+权限选项		若设置为defaults，则默认权限为：rw, suid, dev, exec, auto, nouser, async
+是否备份		若为1则开机后使用dump进行磁盘备份，为0则不备份
+是否自检		若为1则开机后自动进行磁盘自检，为0则不自检
+```
+
+如果想将文件系统为ext4的硬件设备/dev/sdb2在开机后自动挂载到/backup目录上，并保持默认权限且无需开机自检，就需要在/etc/fstab文件中写入下面的信息，这样在系统重启后也会成功挂载。
+
+```
+[root@linuxprobe ~]# vim /etc/fstab
+#
+# /etc/fstab
+# Created by anaconda on Wed May 4 19:26:23 2017
+#
+# Accessible filesystems, by reference, are maintained under '/dev/disk'
+# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
+#
+/dev/mapper/rhel-root / xfs defaults 1 1
+UUID=812b1f7c-8b5b-43da-8c06-b9999e0fe48b /boot xfs defaults 1 2
+/dev/mapper/rhel-swap swap swap defaults 0 0
+/dev/cdrom /media/cdrom iso9660 defaults 0 0 
+/dev/sdb2 /backup ext4 defaults 0 0
+```
+
+###### umount命令
+
+用于撤销已经挂载的设备文件，格式为“umount [挂载点/设备文件]”。我们挂载文件系统的目的是为了使用硬件资源，而卸载文件系统就意味不再使用硬件的设备资源；相对应地，挂载操作就是把硬件设备与目录进行关联的动作，因此卸载操作只需要说明想要取消关联的设备文件或挂载目录的其中一项即可，一般不需要加其他额外的参数。我们来尝试手动卸载掉/dev/sdb2设备文件：
+
+```
+[root@linuxprobe ~]# umount /dev/sdb2
+```
