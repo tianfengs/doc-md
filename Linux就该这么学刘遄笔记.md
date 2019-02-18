@@ -2928,3 +2928,394 @@ UUID=812b1f7c-8b5b-43da-8c06-b9999e0fe48b /boot xfs defaults 1 2
 ```
 [root@linuxprobe ~]# umount /dev/sdb2
 ```
+
+##### 6.5 添加硬盘设备
+
+在虚拟机中模拟添加了硬盘设备后就应该能看到抽象成的硬盘设备文件了。按照前文讲解的udev服务命名规则，第二个被识别的SCSI设备应该会被保存为/dev/sdb，这个就是硬盘设备文件了。但在开始使用该硬盘之前还需要进行分区操作，例如从中取出一个2GB的分区设备以供后面的操作使用。
+
+###### 6.5.1 fdisk命令
+
+fdisk命令用于管理磁盘分区，格式为“fdisk  [磁盘名称]”，它提供了集添加、删除、转换分区等功能于一身。
+
+这条命令的参数是交互式的
+
+```
+m	查看全部可用的参数
+n	添加新的分区
+d	删除某个分区信息
+l	列出所有可用的分区类型
+t	改变某个分区的类型
+p	查看分区表信息
+w	保存并退出
+q	不保存直接退出
+```
+
+第1步：我们首先使用fdisk命令来尝试管理/dev/sdb硬盘设备。在看到提示信息后输入参数p来查看硬盘设备内已有的分区信息，其中包括了硬盘的容量大小、扇区个数等信息：
+
+```
+[root@linuxprobe ~]# fdisk /dev/sdb
+Welcome to fdisk (util-linux 2.23.2).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+Device does not contain a recognized partition table
+Building a new DOS disklabel with disk identifier 0x47d24a34.
+Command (m for help): p
+Disk /dev/sdb: 21.5 GB, 21474836480 bytes, 41943040 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x47d24a34
+Device Boot Start End Blocks Id System
+```
+
+第2步：输入参数n尝试添加新的分区。系统会要求您是选择继续输入参数p来创建主分区，还是输入参数e来创建扩展分区。这里输入参数p来创建一个主分区：
+
+```
+Command (m for help): n
+Partition type:
+p primary (0 primary, 0 extended, 4 free)
+e extended
+Select (default p): p
+```
+
+第3步：在确认创建一个主分区后，系统要求您先输入主分区的编号。我们在前文得知，主分区的编号范围是1～4，因此这里输入默认的1就可以了。接下来系统会提示定义起始的扇区位置，这不需要改动，我们敲击回车键保留默认设置即可，系统会自动计算出最靠前的空闲扇区的位置。最后，系统会要求定义分区的结束扇区位置，这其实就是要去定义整个分区的大小是多少。我们不用去计算扇区的个数，只需要输入+2G即可创建出一个容量为2GB的硬盘分区。
+
+```
+Partition number (1-4, default 1): 1
+First sector (2048-41943039, default 2048):此处敲击回车
+Using default value 2048
+Last sector, +sectors or +size{K,M,G} (2048-41943039, default 41943039): +2G
+Partition 1 of type Linux and of size 2 GiB is set
+```
+
+第4步：再次使用参数p来查看硬盘设备中的分区信息。果然就能看到一个名称为/dev/sdb1、起始扇区位置为2048、结束扇区位置为4196351的主分区了。这时候千万不要直接关闭窗口，而应该敲击参数w后回车，这样分区信息才是真正的写入成功啦。
+
+```
+Command (m for help): p
+Disk /dev/sdb: 21.5 GB, 21474836480 bytes, 41943040 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x47d24a34
+Device Boot Start End Blocks Id System
+/dev/sdb1 2048 4196351 2097152 83 Linux
+Command (m for help): w
+The partition table has been altered!
+Calling ioctl() to re-read partition table.
+Syncing disks.
+```
+
+第5步：在上述步骤执行完毕之后，Linux系统会自动把这个硬盘主分区抽象成/dev/sdb1设备文件。我们可以使用file命令查看该文件的属性，但是刘遄老师在讲课和工作中发现，有些时候系统并没有自动把分区信息同步给Linux内核，而且这种情况似乎还比较常见（但不能算作是严重的bug）。我们可以输入partprobe命令手动将分区信息同步到内核，而且一般推荐连续两次执行该命令，效果会更好。如果使用这个命令都无法解决问题，那么就重启计算机吧，这个杀手锏百试百灵，一定会有用的。
+
+```
+[root@linuxprobe ]# file /dev/sdb1
+/dev/sdb1: cannot open (No such file or directory)
+[root@linuxprobe ]# partprobe
+[root@linuxprobe ]# partprobe
+[root@linuxprobe ]# file /dev/sdb1
+/dev/sdb1: block special
+```
+
+第6步：格式化。在Linux系统中用于格式化操作的命令**mkfs**。这条命令很有意思，因为在Shell终端中输入mkfs名后再敲击两下用于补齐命令的Tab键，会有如下所示的效果：
+
+```
+[root@linuxprobe ~]# mkfs
+mkfs mkfs.cramfs mkfs.ext3 mkfs.fat mkfs.msdos mkfs.xfs
+mkfs.btrfs mkfs.ext2 mkfs.ext4 mkfs.minix mkfs.vfat
+```
+
+对！这个mkfs命令很贴心地把常用的文件系统名称用后缀的方式保存成了多个命令文件，用起来也非常简单—mkfs.文件类型名称。例如要格式分区为XFS的文件系统，则命令应为**mkfs.xfs /dev/sdb1**。
+
+```
+[root@linuxprobe ~]# mkfs.xfs /dev/sdb1
+meta-data=/dev/sdb1 isize=256 agcount=4, agsize=131072 blks
+ = sectsz=512 attr=2, projid32bit=1
+ = crc=0
+data = bsize=4096 blocks=524288, imaxpct=25
+ = sunit=0 swidth=0 blks
+naming =version 2 bsize=4096 ascii-ci=0 ftype=0
+log =internal log bsize=4096 blocks=2560, version=2
+ = sectsz=512 sunit=0 blks, lazy-count=1
+realtime =none extsz=4096 blocks=0, rtextents=0
+```
+
+第7步：挂载。
+
+> 首先是创建一个用于挂载设备的挂载点目录；
+>
+> 然后使用mount命令将存储设备与挂载点进行关联；
+>
+> 最后使用df -h命令来查看挂载状态和硬盘使用量信息。
+
+```
+[root@linuxprobe ~]# mkdir /newFS
+[root@linuxprobe ~]# mount /dev/sdb1 /newFS/
+[root@linuxprobe ~]# df -h
+Filesystem Size Used Avail Use% Mounted on
+/dev/mapper/rhel-root 18G 3.5G 15G 20% /
+devtmpfs 905M 0 905M 0% /dev
+tmpfs 914M 140K 914M 1% /dev/shm
+tmpfs 914M 8.8M 905M 1% /run
+tmpfs 914M 0 914M 0% /sys/fs/cgroup
+/dev/sr0 3.5G 3.5G 0 100% /media/cdrom
+/dev/sda1 497M 119M 379M 24% /boot
+/dev/sdb1 2.0G 33M 2.0G 2% /newFS
+```
+
+###### 6.5.2 du命令
+
+既然存储设备已经顺利挂载，接下来就可以尝试通过挂载点目录向存储设备中写入文件了。在写入文件之前，先介绍一个用于查看文件数据占用量的du命令，其格式为“du [选项] [文件]”。
+
+该命令就是用来查看一个或多个文件占用了多大的硬盘空间。还可以使用du -sh /*命令来查看在Linux系统根目录下所有一级目录分别占用的空间大小。
+
+下面，我们先从某些目录中复制过来一批文件，然后查看这些文件总共占用了多大的容量：
+
+```
+[root@linuxprobe ~]# cp -rf /etc/* /newFS/
+[root@linuxprobe ~]# ls /newFS/
+abrt hosts pulse
+adjtime hosts.allow purple
+aliases hosts.deny qemu-ga
+aliases.db hp qemu-kvm
+alsa idmapd.conf radvd.conf
+alternatives init.d rc0.d
+anacrontab inittab rc1.d
+………………省略部分输入信息………………
+[root@linuxprobe ~]# du -sh /newFS/
+33M /newFS/
+```
+
+使用mount命令挂载的设备文件会在系统下一次重启的时候失效。如果想让这个设备文件的**挂载永久有效**，则需要把挂载的信息写入到配置文件中：
+
+```
+[root@linuxprobe ~]# vim /etc/fstab
+#
+# /etc/fstab
+# Created by anaconda on Wed May 4 19:26:23 2017
+#
+# Accessible filesystems, by reference, are maintained under '/dev/disk'
+# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
+#
+/dev/mapper/rhel-root / xfs defaults 1 1
+UUID=812b1f7c-8b5b-43da-8c06-b9999e0fe48b /boot xfs defaults 1 2
+/dev/mapper/rhel-swap swap swap defaults 0 0
+/dev/cdrom /media/cdrom iso9660 defaults 0 0 
+/dev/sdb1 /newFS xfs defaults 0 0
+```
+
+###### 6.6 添加交换分区
+
+SWAP（交换）分区是一种通过在硬盘中预先划分一定的空间，然后将把内存中暂时不常用的数据临时存放到硬盘中，以便腾出物理内存空间让更活跃的程序服务来使用的技术，其设计目的是为了解决真实物理内存不足的问题。但由于交换分区毕竟是通过硬盘设备读写数据的，速度肯定要比物理内存慢，所以只有当真实的物理内存耗尽后才会调用交换分区的资源。
+
+交换分区的创建过程与前文讲到的挂载并使用存储设备的过程非常相似。在对/dev/sdb存储设备进行分区操作前，有必要先说一下交换分区的划分建议：在生产环境中，交换分区的大小一般为真实物理内存的1.5～2倍，为了让大家更明显地感受交换分区空间的变化，这里取出一个大小为5GB的主分区作为交换分区资源。在分区创建完毕后保存并退出即可：
+
+```
+[root@linuxprobe ~]# fdisk /dev/sdb
+Welcome to fdisk (util-linux 2.23.2).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+Device does not contain a recognized partition table
+Building a new DOS disklabel with disk identifier 0xb3d27ce1.
+Command (m for help): n
+Partition type:
+p primary (1 primary, 0 extended, 3 free)
+e extendedSelect (default p): p
+Partition number (2-4, default 2): 
+First sector (4196352-41943039, default 4196352): 此处敲击回车
+Using default value 4196352
+Last sector, +sectors or +size{K,M,G} (4196352-41943039, default 41943039): +5G
+Partition 2 of type Linux and of size 5 GiB is set
+Command (m for help): p
+Disk /dev/sdb: 21.5 GB, 21474836480 bytes, 41943040 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0xb0ced57f
+ Device Boot Start End Blocks Id System
+/dev/sdb1 2048 4196351 2097152 83 Linux
+/dev/sdb2 4196352 14682111 5242880 83 Linux
+Command (m for help): w
+The partition table has been altered!
+Calling ioctl() to re-read partition table.
+WARNING: Re-reading the partition table failed with error 16: Device or resource busy.
+The kernel still uses the old table. The new table will be used at
+the next reboot or after you run partprobe(8) or kpartx(8)
+Syncing disks.
+```
+
+使用SWAP分区专用的格式化命令mkswap，对新建的主分区进行格式化操作：
+
+```
+[root@linuxprobe ~]# mkswap /dev/sdb2
+Setting up swapspace version 1, size = 5242876 KiB
+no label, UUID=2972f9cb-17f0-4113-84c6-c64b97c40c75
+```
+
+使用swapon命令把准备好的SWAP分区设备正式挂载到系统中。我们可以使用free -m命令查看交换分区的大小变化（由2047MB增加到7167MB）：
+
+```
+[root@linuxprobe ~]# free -m
+total used free shared buffers cached
+Mem: 1483 782 701 9 0 254
+-/+ buffers/cache: 526 957
+Swap: 2047 0 2047
+[root@linuxprobe ~]# swapon /dev/sdb2
+[root@linuxprobe ~]# free -m
+total used free shared buffers cached
+Mem: 1483 785 697 9 0 254
+-/+ buffers/cache: 530 953
+Swap: 7167 0 7167
+```
+
+为了能够让新的交换分区设备在重启后依然生效，需要按照下面的格式将相关信息写入到配置文件中，并记得保存：
+
+```
+[root@linuxprobe ~]# vim /etc/fstab
+#
+# /etc/fstab
+# Created by anaconda on Wed May 4 19:26:23 2017
+#
+# Accessible filesystems, by reference, are maintained under '/dev/disk'
+# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
+#
+/dev/mapper/rhel-root / xfs defaults 1 1
+UUID=812b1f7c-8b5b-43da-8c06-b9999e0fe48b /boot xfs defaults 1 2
+/dev/mapper/rhel-swap swap swap defaults 0 0
+/dev/cdrom /media/cdrom iso9660 defaults 0 0 
+/dev/sdb1 /newFS xfs defaults 0 0 
+/dev/sdb2 swap swap defaults 0 0 
+```
+
+##### 6.7 磁盘容量配额
+
+root管理员就需要使用磁盘容量配额服务来限制某位用户或某个用户组针对特定文件夹可以使用的最大硬盘空间或最大文件个数，一旦达到这个最大值就不再允许继续使用。可以使用quota命令进行磁盘容量配额管理，从而限制用户的硬盘可用容量或所能创建的最大文件个数。quota命令还有软限制和硬限制的功能。
+
+> 软限制：当达到软限制时会提示用户，但仍允许用户在限定的额度内继续使用。
+>
+> 硬限制：当达到硬限制时会提示用户，且强制终止用户的操作。
+
+RHEL 7系统中已经安装了**quota磁盘容量配额服务程序包**，但存储设备却默认没有开启对quota的支持，此时**需要手动编辑配置文件**，**让**RHEL 7系统中的**/boot目录能够支持quota磁盘配额技术**。另外，对于学习过早期的Linux系统，或者具有RHEL 6系统使用经验的读者来说，这里需要特别注意。早期的Linux系统要想让硬盘设备支持quota磁盘容量配额服务，使用的是usrquota参数，而RHEL 7系统使用的则是uquota参数。在重启系统后使用mount命令查看，即可发现/boot目录已经支持quota磁盘配额技术了：
+
+```
+[root@linuxprobe ~]# vim /etc/fstab
+#
+# /etc/fstab
+# Created by anaconda on Wed May 4 19:26:23 2017
+#
+# Accessible filesystems, by reference, are maintained under '/dev/disk'
+# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
+#
+/dev/mapper/rhel-root / xfs defaults 1 1
+UUID=812b1f7c-8b5b-43da-8c06-b9999e0fe48b /boot xfs defaults,uquota 1 2
+/dev/mapper/rhel-swap swap swap defaults 0 0
+/dev/cdrom /media/cdrom iso9660 defaults 0 0 
+/dev/sdb1 /newFS xfs defaults 0 0 
+/dev/sdb2 swap swap defaults 0 0 
+[root@linuxprobe ~]# reboot
+[root@linuxprobe ~]# mount | grep boot
+/dev/sda1 on /boot type xfs (rw,relatime,seclabel,attr2,inode64,usrquota)
+```
+
+**磁盘容量配额使用quota经典案例**：
+
+编写脚本/app/bin/adduser.sh，创建用户myquota1，myquota2，myquota3，myquota4，myquota5,密码都为centos。都位于myquotagrp这个组。这五个用户有一个共享目录/app/home/myquota，并且只有myquotagrp这个组的所有成员对这个共享目录拥有全部权限，其他人没有任何权限。
+
+```bash
+  1 #!/bin/bash
+  2 groupadd myquotagrp
+  3 for num in {1..5}
+  4 do
+  5     useradd -d /app/home/myquota$num -G myquotagrp myquota$num
+  6     echo "centos" |passwd --stdin myquota$num
+  7 done
+  8 mkdir /app/myquota
+  9 chgrp myquotagrp /app/myquota
+ 10 chmod 2770 /app/myquota
+```
+
+接下来创建一个用于检查quota磁盘容量配额效果的用户tom，并针对/boot目录增加其他人的写权限，保证用户能够正常写入数据：
+
+```
+[root@linuxprobe ~]# useradd tom
+[root@linuxprobe ~]# chmod -Rf o+w /boot
+```
+
+###### 6.7.1 xfs_quota命令
+
+xfs_quota命令，是一个专门针对XFS文件系统来管理quota磁盘容量配额服务而设计的命令，格式为“xfs_quota [参数] 配额 文件系统”。
+
+```
+-c参数用于以参数的形式设置要执行的命令
+-x参数是专家模式，让运维人员能够对quota服务进行更多复杂的配置
+```
+
+接下来我们使用xfs_quota命令来设置用户tom对/boot目录的quota磁盘容量配额。具体的限额控制包括：硬盘使用量的软限制和硬限制分别为3MB和6MB；创建文件数量的软限制和硬限制分别为3个和6个。
+
+```
+[root@linuxprobe ~]# xfs_quota -x -c 'limit bsoft=3m bhard=6m isoft=3 ihard=6 tom' /boot
+[root@linuxprobe ~]# xfs_quota -x -c report /boot
+User quota on /boot (/dev/sda1)   Blocks
+User ID Used Soft Hard Warn/Grace
+---------- --------------------------------------------------
+root 95084 0 0 00 [--------]
+tom 0 3072 6144 00 [--------]
+```
+
+当配置好上述的各种软硬限制后，尝试切换到这个普通用户，然后分别尝试创建一个体积为5MB和8MB的文件。可以发现，在创建8MB的文件时受到了系统限制：
+
+```
+[root@linuxprobe ~]# su - tom
+[tom@linuxprobe ~]$ dd if=/dev/zero of=/boot/tom bs=5M count=1
+1+0 records in
+1+0 records out
+5242880 bytes (5.2 MB) copied, 0.123966 s, 42.3 MB/s
+[tom@linuxprobe ~]$ dd if=/dev/zero of=/boot/tom bs=8M count=1
+dd: error writing ‘/boot/tom’: Disk quota exceeded
+1+0 records in
+0+0 records out
+6291456 bytes (6.3 MB) copied, 0.0201593 s, 312 MB/s
+```
+
+###### 6.7.2 edquota命令
+
+edquota命令用于编辑用户的quota配额限制，格式为“edquota [参数] [用户] ”。
+
+在为用户设置了quota磁盘容量配额限制后，可以使用edquota命令按需修改限额的数值。
+
+```
+-u参数	表示要针对哪个用户进行设置；
+-g参数	表示要针对哪个用户组进行设置。
+```
+
+edquota命令会调用Vi或Vim编辑器来让root管理员修改要限制的具体细节。下面把用户tom的硬盘使用量的硬限额从5MB提升到8MB：
+
+```
+[root@linuxprobe ~]# edquota -u tom
+Disk quotas for user tom (uid 1001):
+ Filesystem blocks soft hard inodes soft hard
+ /dev/sda1 6144 3072 8192 1 3 6
+[root@linuxprobe ~]# su - tom
+Last login: Mon Sep 7 16:43:12 CST 2017 on pts/0
+[tom@linuxprobe ~]$ dd if=/dev/zero of=/boot/tom bs=8M count=1
+1+0 records in
+1+0 records out
+8388608 bytes (8.4 MB) copied, 0.0268044 s, 313 MB/s
+[tom@linuxprobe ~]$ dd if=/dev/zero of=/boot/tom bs=10M count=1
+dd: error writing ‘/boot/tom’: Disk quota exceeded
+1+0 records in
+0+0 records out
+8388608 bytes (8.4 MB) copied, 0.167529 s, 50.1 MB/s
+```
+
+##### 6.8 软硬方式链接
+
+Linux系统中的“快捷方式”。在Windows系统中，快捷方式就是指向原始文件的一个链接文件，可以让用户从不同的位置来访问原始的文件；原文件一旦被删除或剪切到其他地方后，会导致链接文件失效。但是，这个看似简单的东西在Linux系统中可不太一样。
+
+在Linux系统中存在硬链接和软连接两种文件。
+
+**硬链接（hard link）：**可以将它理解为一个“指向原始文件inode的指针”，系统不为它分配独立的inode和文件。所以，硬链接文件与原始文件其实是同一个文件，只是名字不同。我们每添加一个硬链接，该文件的inode连接数就会增加1；而且只有当该文件的inode连接数为0时，才算彻底将它删除。换言之，由于硬链接实际上是指向原文件inode的指针，因此即便原始文件被删除，依然可以通过硬链接文件来访问。需要注意的是，由于技术的局限性，我们不能跨分区对目录文件进行链接。
+
+**软链接（也称为符号链接[symbolic link]）：**仅仅包含所链接文件的路径名，因此能链接目录文件，也可以跨越文件系统进行链接。但是，当原始文件被删除后，链接文件也将失效，从这一点上来说与Windows系统中的“快捷方式”具有一样的性质。
