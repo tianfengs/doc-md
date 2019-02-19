@@ -2950,7 +2950,7 @@ w	保存并退出
 q	不保存直接退出
 ```
 
-第1步：我们首先使用fdisk命令来尝试管理/dev/sdb硬盘设备。在看到提示信息后输入参数p来查看硬盘设备内已有的分区信息，其中包括了硬盘的容量大小、扇区个数等信息：
+第1步：我们首先使用fdisk命令来尝试管理/dev/sdb硬盘设备。在看到提示信息后输入**参数p**来查看硬盘设备内已有的分区信息，其中包括了硬盘的容量大小、扇区个数等信息：
 
 ```
 [root@linuxprobe ~]# fdisk /dev/sdb
@@ -2969,7 +2969,7 @@ Disk identifier: 0x47d24a34
 Device Boot Start End Blocks Id System
 ```
 
-第2步：输入参数n尝试添加新的分区。系统会要求您是选择继续输入参数p来创建主分区，还是输入参数e来创建扩展分区。这里输入参数p来创建一个主分区：
+第2步：输入**参数n**尝试添加新的分区。系统会要求您是选择继续输入参数p来创建主分区，还是输入参数e来创建扩展分区。这里输入参数p来创建一个主分区：
 
 ```
 Command (m for help): n
@@ -2979,7 +2979,7 @@ e extended
 Select (default p): p
 ```
 
-第3步：在确认创建一个主分区后，系统要求您先输入主分区的编号。我们在前文得知，主分区的编号范围是1～4，因此这里输入默认的1就可以了。接下来系统会提示定义起始的扇区位置，这不需要改动，我们敲击回车键保留默认设置即可，系统会自动计算出最靠前的空闲扇区的位置。最后，系统会要求定义分区的结束扇区位置，这其实就是要去定义整个分区的大小是多少。我们不用去计算扇区的个数，只需要输入+2G即可创建出一个容量为2GB的硬盘分区。
+第3步：在确认创建一个主分区后，系统要求您先输入**主分区的编号**。我们在前文得知，主分区的编号范围是1～4，因此这里输入默认的1就可以了。接下来系统会提示定义起始的扇区位置，这不需要改动，我们敲击回车键保留默认设置即可，系统会自动计算出最靠前的空闲扇区的位置。最后，系统会要求定义分区的结束扇区位置，这其实就是要去定义整个分区的大小是多少。我们不用去计算扇区的个数，只需要输入+2G即可创建出一个容量为2GB的硬盘分区。
 
 ```
 Partition number (1-4, default 1): 1
@@ -2989,7 +2989,7 @@ Last sector, +sectors or +size{K,M,G} (2048-41943039, default 41943039): +2G
 Partition 1 of type Linux and of size 2 GiB is set
 ```
 
-第4步：再次使用参数p来查看硬盘设备中的分区信息。果然就能看到一个名称为/dev/sdb1、起始扇区位置为2048、结束扇区位置为4196351的主分区了。这时候千万不要直接关闭窗口，而应该敲击参数w后回车，这样分区信息才是真正的写入成功啦。
+第4步：再次使用参数p来查看硬盘设备中的分区信息。果然就能看到一个名称为/dev/sdb1、起始扇区位置为2048、结束扇区位置为4196351的主分区了。这时候千万不要直接关闭窗口，而应该敲击**参数w**后回车，这样分区信息才是真正的写入成功啦。
 
 ```
 Command (m for help): p
@@ -3007,7 +3007,7 @@ Calling ioctl() to re-read partition table.
 Syncing disks.
 ```
 
-第5步：在上述步骤执行完毕之后，Linux系统会自动把这个硬盘主分区抽象成/dev/sdb1设备文件。我们可以使用file命令查看该文件的属性，但是刘遄老师在讲课和工作中发现，有些时候系统并没有自动把分区信息同步给Linux内核，而且这种情况似乎还比较常见（但不能算作是严重的bug）。我们可以输入partprobe命令手动将分区信息同步到内核，而且一般推荐连续两次执行该命令，效果会更好。如果使用这个命令都无法解决问题，那么就重启计算机吧，这个杀手锏百试百灵，一定会有用的。
+第5步：在上述步骤执行完毕之后，Linux系统会自动把这个硬盘主分区抽象成/dev/sdb1设备文件。我们可以使用**file命令查看该文件的属性**，但是刘遄老师在讲课和工作中发现，有些时候系统并没有自动把分区信息同步给Linux内核，而且这种情况似乎还比较常见（但不能算作是严重的bug）。我们可以输入**partprobe**命令手动将分区信息同步到内核，而且一般推荐连续两次执行该命令，效果会更好。如果使用这个命令都无法解决问题，那么就重启计算机吧，这个杀手锏百试百灵，一定会有用的。
 
 ```
 [root@linuxprobe ]# file /dev/sdb1
@@ -3018,7 +3018,7 @@ Syncing disks.
 /dev/sdb1: block special
 ```
 
-第6步：格式化。在Linux系统中用于格式化操作的命令**mkfs**。这条命令很有意思，因为在Shell终端中输入mkfs名后再敲击两下用于补齐命令的Tab键，会有如下所示的效果：
+第6步：**格式化**。在Linux系统中用于格式化操作的命令**mkfs**。这条命令很有意思，因为在Shell终端中输入mkfs名后再敲击两下用于补齐命令的Tab键，会有如下所示的效果：
 
 ```
 [root@linuxprobe ~]# mkfs
@@ -3030,7 +3030,7 @@ mkfs.btrfs mkfs.ext2 mkfs.ext4 mkfs.minix mkfs.vfat
 
 ```
 [root@linuxprobe ~]# mkfs.xfs /dev/sdb1
-meta-data=/dev/sdb1 isize=256 agcount=4, agsize=131072 blks
+meta-data=/dev/sdb1 isize=256gcount=4, agsize=131072 blks
  = sectsz=512 attr=2, projid32bit=1
  = crc=0
 data = bsize=4096 blocks=524288, imaxpct=25
@@ -3041,7 +3041,7 @@ log =internal log bsize=4096 blocks=2560, version=2
 realtime =none extsz=4096 blocks=0, rtextents=0
 ```
 
-第7步：挂载。
+第7步：**挂载**。
 
 > 首先是创建一个用于挂载设备的挂载点目录；
 >
@@ -3066,7 +3066,7 @@ tmpfs 914M 0 914M 0% /sys/fs/cgroup
 
 ###### 6.5.2 du命令
 
-既然存储设备已经顺利挂载，接下来就可以尝试通过挂载点目录向存储设备中写入文件了。在写入文件之前，先介绍一个用于查看文件数据占用量的du命令，其格式为“du [选项] [文件]”。
+既然存储设备已经顺利挂载，接下来就可以尝试通过挂载点目录向存储设备中写入文件了。在写入文件之前，先介绍一个用于**查看文件数据占用量的du命令**，其格式为“du [选项] [文件]”。
 
 该命令就是用来查看一个或多个文件占用了多大的硬盘空间。还可以使用du -sh /*命令来查看在Linux系统根目录下所有一级目录分别占用的空间大小。
 
@@ -3214,6 +3214,8 @@ UUID=812b1f7c-8b5b-43da-8c06-b9999e0fe48b /boot xfs defaults,uquota 1 2
 /dev/cdrom /media/cdrom iso9660 defaults 0 0 
 /dev/sdb1 /newFS xfs defaults 0 0 
 /dev/sdb2 swap swap defaults 0 0 
+[root@linuxprobe Desktop]# mount | grep boot
+/dev/sda1 on /boot type xfs (rw,relatime,seclabel,attr2,inode64,noquota)
 [root@linuxprobe ~]# reboot
 [root@linuxprobe ~]# mount | grep boot
 /dev/sda1 on /boot type xfs (rw,relatime,seclabel,attr2,inode64,usrquota)
@@ -3258,10 +3260,10 @@ xfs_quota命令，是一个专门针对XFS文件系统来管理quota磁盘容量
 [root@linuxprobe ~]# xfs_quota -x -c 'limit bsoft=3m bhard=6m isoft=3 ihard=6 tom' /boot
 [root@linuxprobe ~]# xfs_quota -x -c report /boot
 User quota on /boot (/dev/sda1)   Blocks
-User ID Used Soft Hard Warn/Grace
+User ID		Used 	Soft 	Hard 	Warn/Grace
 ---------- --------------------------------------------------
-root 95084 0 0 00 [--------]
-tom 0 3072 6144 00 [--------]
+root    	95084 	0 		0 		00 [--------]
+tom 		0 		3072 	6144 	00 [--------]
 ```
 
 当配置好上述的各种软硬限制后，尝试切换到这个普通用户，然后分别尝试创建一个体积为5MB和8MB的文件。可以发现，在创建8MB的文件时受到了系统限制：
@@ -3319,3 +3321,786 @@ Linux系统中的“快捷方式”。在Windows系统中，快捷方式就是�
 **硬链接（hard link）：**可以将它理解为一个“指向原始文件inode的指针”，系统不为它分配独立的inode和文件。所以，硬链接文件与原始文件其实是同一个文件，只是名字不同。我们每添加一个硬链接，该文件的inode连接数就会增加1；而且只有当该文件的inode连接数为0时，才算彻底将它删除。换言之，由于硬链接实际上是指向原文件inode的指针，因此即便原始文件被删除，依然可以通过硬链接文件来访问。需要注意的是，由于技术的局限性，我们不能跨分区对目录文件进行链接。
 
 **软链接（也称为符号链接[symbolic link]）：**仅仅包含所链接文件的路径名，因此能链接目录文件，也可以跨越文件系统进行链接。但是，当原始文件被删除后，链接文件也将失效，从这一点上来说与Windows系统中的“快捷方式”具有一样的性质。
+
+###### **ln命令**
+
+ln命令用于创建链接文件，格式为“ln [选项] 目标”。
+
+在使用ln命令时，是否添加-s参数，将创建出性质不同的两种“快捷方式”。因此如果没有扎实的理论知识和实践经验做铺垫，尽管能够成功完成实验，但永远不会明白为什么会成功。
+
+```
+-s	创建“符号链接”（如果不带-s参数，则默认创建硬链接）
+-f	强制创建文件或目录的链接
+-i	覆盖前先询问
+-v	显示创建链接的过程
+```
+
+创建一个类似于Windows系统中快捷方式的软链接。当原始文件被删除后，就无法读取新建的链接文件了。
+
+```
+[root@linuxprobe ~]# echo "Welcome to linuxprobe.com" > readme.txt
+[root@linuxprobe ~]# ln -s readme.txt readit.txt
+[root@linuxprobe ~]# cat readme.txt 
+Welcome to linuxprobe.com
+[root@linuxprobe ~]# cat readit.txt 
+Welcome to linuxprobe.com
+[root@linuxprobe ~]# ls -l readme.txt 
+-rw-r--r-- 1 root root 26 Jan 11 00:08 readme.txt
+[root@linuxprobe ~]# rm -f readme.txt 
+[root@linuxprobe ~]# cat readit.txt 
+cat: readit.txt: No such file or directory
+```
+
+创建一个硬链接，即相当于针对原始文件的硬盘存储位置创建了一个指针，这样一来，新创建的这个硬链接就不再依赖于原始文件的名称等信息，也不会因为原始文件的删除而导致无法读取。同时可以看到创建硬链接后，原始文件的硬盘链接数量增加到了2。
+
+```
+[root@linuxprobe ~]# echo "Welcome to linuxprobe.com" > readme.txt
+[root@linuxprobe ~]# ln readme.txt readit.txt
+[root@linuxprobe ~]# cat readme.txt 
+Welcome to linuxprobe.com
+[root@linuxprobe ~]# cat readit.txt 
+Welcome to linuxprobe.com
+[root@linuxprobe ~]# ls -l readme.txt 
+-rw-r--r-- 2 root root 26 Jan 11 00:13 readme.txt
+[root@linuxprobe ~]# rm -f readme.txt 
+[root@linuxprobe ~]# cat readit.txt 
+Welcome to linuxprobe.com
+```
+
+### 第七章 使用RAID与LVM磁盘阵列技术
+
+深入讲解各个常用**RAID（Redundant Array of Independent Disks，独立冗余磁盘阵列）**技术方案的特性
+
+通过实际部署**RAID 10、RAID 5+备份盘**等方案来更直观地查看RAID的强大效果，以便进一步满足生产环境对硬盘设备的IO读写速度和数据冗余备份机制的需求。
+
+考虑到用户可能会动态调整存储资源，本章还将介绍**LVM（Logical Volume Manager，逻辑卷管理器）**的部署、扩容、缩小、快照以及卸载删除的相关知识。
+
+读者在学完本章内容后，便可以在企业级生产环境中灵活运用RAID和LVM来满足对存储资源的高级管理需求了。
+
+##### 7.1 RAID磁盘冗余阵列
+
+1988年，加利福尼亚大学伯克利分校首次提出并定义了RAID技术的概念。RAID技术通过把多个硬盘设备组合成一个容量更大、安全性更好的磁盘阵列，并把数据切割成多个区段后分别存放在各个不同的物理硬盘设备上，然后利用分散读写技术来提升磁盘阵列整体的性能，同时把多个重要数据的副本同步到不同的物理硬盘设备上，从而起到了非常好的数据冗余备份效果。
+
+RAID技术的设计初衷是减少因为采购硬盘设备带来的费用支出，但是与数据本身的价值相比较，现代企业更看重的则是RAID技术所具备的冗余备份机制以及带来的硬盘吞吐量的提升。RAID不仅**降低了硬盘设备损坏后丢失数据的几率**，**还提升了硬盘设备的读写速度**，所以它在绝大多数运营商或大中型企业中得以广泛部署和应用。
+
+目前已有的RAID磁盘阵列的方案至少有十几种，而[刘遄](https://www.linuxprobe.com/)老师接下来会详细讲解RAID 0、RAID 1、RAID 5与RAID 10这4种最常见的方案。
+
+RAID 0技术能够有效地提升硬盘数据的吞吐速度，但是不具备数据备份和错误修复能力。
+
+RAID 1技术虽然十分注重数据的安全性，但是因为是在多块硬盘设备中写入了相同的数据，因此硬盘设备的利用率得以下降，从理论上来说，硬盘空间的真实可用率只有50%，由三块硬盘设备组成的RAID 1磁盘阵列的可用率只有33%左右。
+
+RAID5技术是把硬盘设备的数据奇偶校验信息保存到其他硬盘设备中。RAID 5磁盘阵列组中数据的奇偶校验信息并不是单独保存到某一块硬盘设备中，而是存储到除自身以外的其他每一块硬盘设备上。RAID 5技术实际上没有备份硬盘中的真实数据信息，而是当硬盘设备出现问题后**通过奇偶校验信息来尝试重建损坏的数据**。RAID这样的技术特性“妥协”地兼顾了硬盘设备的读写速度、数据安全性与存储成本问题。
+
+![raid5](pics\raid5.gif)
+
+RAID 10技术是RAID 1+RAID 0技术的一个“组合体”。需要至少4块硬盘来组建，其中先分别两两制作成RAID 1磁盘阵列，以保证数据的安全性；然后再对两个RAID 1磁盘阵列实施RAID 0技术，进一步提高硬盘设备的读写速度。这样从理论上来讲，只要坏的不是同一组中的所有硬盘，那么最多可以损坏50%的硬盘设备而不丢失数据。由于RAID 10技术继承了RAID 0的高读写速度和RAID 1的数据安全性，在不考虑成本的情况下RAID 10的性能都超过了RAID 5，因此当前成为广泛使用的一种存储技术。
+
+![raid-10-1024x508](pics\raid-10-1024x508.png)
+
+###### 7.1.1 部署磁盘阵列
+
+首先，需要在虚拟机中添加4块硬盘设备来制作一个RAID 10磁盘阵列
+
+![虚拟机添加硬盘](pics\虚拟机添加硬盘.jpg)
+
+**mdadm命令**用于管理[Linux系统](https://www.linuxprobe.com/)中的软件RAID硬盘阵列，格式为：
+
+```
+mdadm [模式] <RAID设备名称> [选项] [成员设备名称]
+
+-a	检测设备名称
+-n	指定设备数量
+-l	指定RAID级别
+-C	创建
+-v	显示过程
+-f	模拟设备损坏
+-r	移除设备
+-Q	查看摘要信息
+-D	查看详细信息
+-S	停止RAID磁盘阵列
+```
+
+其中，-C参数代表创建一个RAID阵列卡；-v参数显示创建的过程，同时在后面追加一个设备名称/dev/md0，这样/dev/md0就是创建后的RAID磁盘阵列的名称；-a yes参数代表自动创建设备文件；-n 4参数代表使用4块硬盘来部署这个RAID磁盘阵列；而-l 10参数则代表RAID 10方案；最后再加上4块硬盘设备的名称就搞定了。
+
+```
+[root@linuxprobe ~]# mdadm -Cv /dev/md0 -a yes -n 4 -l 10 /dev/sdb /dev/sdc /dev/sdd /dev/sde
+mdadm: layout defaults to n2
+mdadm: layout defaults to n2
+mdadm: chunk size defaults to 512K
+mdadm: size set to 20954624K
+mdadm: Defaulting to version 1.2 metadata
+mdadm: array /dev/md0 started.
+```
+
+其次，把制作好的RAID磁盘阵列格式化为ext4格式。
+
+```
+[root@linuxprobe ~]# mkfs.ext4 /dev/md0
+mke2fs 1.42.9 (28-Dec-2013)
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=128 blocks, Stripe width=256 blocks
+2621440 inodes, 10477312 blocks
+523865 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=2157969408
+320 block groups
+32768 blocks per group, 32768 fragments per group
+8192 inodes per group
+Superblock backups stored on blocks:
+32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632, 2654208,
+4096000, 7962624
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (32768 blocks): done
+Writing superblocks and filesystem accounting information: done
+```
+
+再次，创建挂载点然后把硬盘设备进行挂载操作。挂载成功后可看到可用空间为40GB。
+
+```
+[root@linuxprobe ~]# mkdir /RAID
+[root@linuxprobe ~]# mount /dev/md0 /RAID
+[root@linuxprobe ~]# df -h
+Filesystem Size Used Avail Use% Mounted on
+/dev/mapper/rhel-root 18G 3.0G 15G 17% /
+devtmpfs 905M 0 905M 0% /dev
+tmpfs 914M 84K 914M 1% /dev/shm
+tmpfs 914M 8.9M 905M 1% /run
+tmpfs 914M 0 914M 0% /sys/fs/cgroup
+/dev/sr0 3.5G 3.5G 0 100% /media/cdrom
+/dev/sda1 497M 119M 379M 24% /boot
+/dev/md0 40G 49M 38G 1% /RAID
+```
+
+最后，查看/dev/md0磁盘阵列的详细信息，并把挂载信息写入到配置文件中，使其永久生效。
+
+```
+[root@linuxprobe ~]# mdadm -D /dev/md0
+/dev/md0:
+Version : 1.2
+Creation Time : Tue May 5 07:43:26 2017
+Raid Level : raid10
+Array Size : 41909248 (39.97 GiB 42.92 GB)
+Used Dev Size : 20954624 (19.98 GiB 21.46 GB)
+Raid Devices : 4
+Total Devices : 4
+Persistence : Superblock is persistent
+Update Time : Tue May 5 07:46:59 2017
+State : clean
+Active Devices : 4
+Working Devices : 4
+Failed Devices : 0
+Spare Devices : 0
+Layout : near=2
+Chunk Size : 512K
+Name : localhost.localdomain:0 (local to host localhost.localdomain)
+UUID : cc9a87d4:1e89e175:5383e1e8:a78ec62c
+Events : 17
+Number Major Minor RaidDevice State
+0 8 16 0 active sync /dev/sdb
+1 8 32 1 active sync /dev/sdc
+2 8 48 2 active sync /dev/sdd
+3 8 64 3 active sync /dev/sde
+[root@linuxprobe ~]# echo "/dev/md0 /RAID ext4 defaults 0 0" >> /etc/fstab
+```
+
+在磁盘阵列使用完成后，需要删除磁盘阵列，先取消磁盘挂载，再输入"mdadm -S /dev/md0"删除建立的磁盘阵列，最后删除分区。
+
+```
+[root@linuxprobe Desktop]# umount /RAID
+[root@linuxprobe Desktop]# mdadm -S /dev/md0
+mdadm: stopped /dev/md0
+
+删除启动设置挂载阵列/dev/md0
+[root@linuxprobe Desktop]# vim /etc/fstab 
+```
+
+###### 7.1.2 损坏磁盘阵列及修复
+
+首先确认有一块物理硬盘设备出现损坏不能再继续正常使用后，应该使用mdadm命令来予以移除之后查看下RAID磁盘阵列组的状态已经被改变：
+
+```
+[root@linuxprobe ~]# mdadm /dev/md0 -f /dev/sdb
+mdadm: set /dev/sdb faulty in /dev/md0
+[root@linuxprobe ~]# mdadm -D /dev/md0
+/dev/md0:
+Version : 1.2
+Creation Time : Fri May 8 08:11:00 2017
+Raid Level : raid10
+Array Size : 41909248 (39.97 GiB 42.92 GB)
+Used Dev Size : 20954624 (19.98 GiB 21.46 GB)
+Raid Devices : 4
+Total Devices : 4
+Persistence : Superblock is persistent
+Update Time : Fri May 8 08:27:18 2017
+State : clean, degraded
+Active Devices : 3
+Working Devices : 3
+Failed Devices : 1
+Spare Devices : 0
+Layout : near=2
+Chunk Size : 512K
+Name : linuxprobe.com:0 (local to host linuxprobe.com)
+UUID : f2993bbd:99c1eb63:bd61d4d4:3f06c3b0
+Events : 21
+Number Major Minor RaidDevice State
+0 0 0 0 removed
+1 8 32 1 active sync /dev/sdc
+2 8 48 2 active sync /dev/sdd
+3 8 64 3 active sync /dev/sde
+0 8 16 - faulty /dev/sdb
+```
+
+在RAID 10级别的磁盘阵列中，当RAID 1磁盘阵列中存在一个故障盘时并不影响RAID 10磁盘阵列的使用。当购买了新的硬盘设备后再使用mdadm命令来予以替换即可，在此期间我们可以在/RAID目录中正常地创建或删除文件。由于我们是在虚拟机中模拟硬盘，所以先重启系统，然后再把新的硬盘添加到RAID磁盘阵列中。
+
+```
+[root@linuxprobe ~]# umount /RAID
+[root@linuxprobe ~]# mdadm /dev/md0 -a /dev/sdb
+[root@linuxprobe ~]# mdadm -D /dev/md0
+/dev/md0:
+ Version : 1.2
+ Creation Time : Mon Jan 30 00:08:56 2017
+ Raid Level : raid10
+ Array Size : 41909248 (39.97 GiB 42.92 GB)
+ Used Dev Size : 20954624 (19.98 GiB 21.46 GB)
+ Raid Devices : 4
+ Total Devices : 4
+ Persistence : Superblock is persistent
+ Update Time : Mon Jan 30 00:19:53 2017
+ State : clean 
+ Active Devices : 4
+Working Devices : 4
+ Failed Devices : 0
+ Spare Devices : 0
+ Layout : near=2
+ Chunk Size : 512K
+ Name : localhost.localdomain:0 (local to host localhost.localdomain)
+ UUID : d3491c05:cfc81ca0:32489f04:716a2cf0
+ Events : 56
+ Number Major Minor RaidDevice State
+ 4 8 16 0 active sync /dev/sdb
+ 1 8 32 1 active sync /dev/sdc
+ 2 8 48 2 active sync /dev/sdd
+ 3 8 64 3 active sync /dev/sde
+[root@linuxprobe ~]# mount -a
+```
+
+###### 7.1.3 磁盘阵列+备份盘
+
+部署RAID 5磁盘阵列时，至少需要用到3块硬盘，还需要再加一块备份硬盘，所以总计需要在虚拟机中模拟4块硬盘设备
+
+现在创建一个RAID 5磁盘阵列+备份盘。在下面的命令中，参数-n 3代表创建这个RAID 5磁盘阵列所需的硬盘数，参数-l 5代表RAID的级别，而参数-x 1则代表有一块备份盘。当查看/dev/md0（即RAID 5磁盘阵列的名称）磁盘阵列的时候就能看到有一块备份盘在等待中了。
+
+```
+[root@linuxprobe ~]# mdadm -Cv /dev/md0 -n 3 -l 5 -x 1 /dev/sdb /dev/sdc /dev/sdd /dev/sde
+mdadm: layout defaults to left-symmetric
+mdadm: layout defaults to left-symmetric
+mdadm: chunk size defaults to 512K
+mdadm: size set to 20954624K
+mdadm: Defaulting to version 1.2 metadata
+mdadm: array /dev/md0 started.
+[root@linuxprobe ~]# mdadm -D /dev/md0
+/dev/md0:
+Version : 1.2
+Creation Time : Fri May 8 09:20:35 2017
+Raid Level : raid5
+Array Size : 41909248 (39.97 GiB 42.92 GB)
+Used Dev Size : 20954624 (19.98 GiB 21.46 GB)
+Raid Devices : 3
+Total Devices : 4
+Persistence : Superblock is persistent
+Update Time : Fri May 8 09:22:22 2017
+State : clean
+Active Devices : 3
+Working Devices : 4
+Failed Devices : 0
+Spare Devices : 1
+Layout : left-symmetric
+Chunk Size : 512K
+Name : linuxprobe.com:0 (local to host linuxprobe.com)
+UUID : 44b1a152:3f1809d3:1d234916:4ac70481
+Events : 18
+Number Major Minor RaidDevice State
+0 8 16 0 active sync /dev/sdb
+1 8 32 1 active sync /dev/sdc
+4 8 48 2 active sync /dev/sdd
+3 8 64 - spare /dev/sde
+```
+
+现在将部署好的RAID 5磁盘阵列格式化为ext4文件格式，然后挂载到目录上，之后就可以使用了。
+
+```
+[root@linuxprobe ~]# mkfs.ext4 /dev/md0
+mke2fs 1.42.9 (28-Dec-2013)
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=128 blocks, Stripe width=256 blocks
+2621440 inodes, 10477312 blocks
+523865 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=2157969408
+320 block groups
+32768 blocks per group, 32768 fragments per group
+8192 inodes per group
+Superblock backups stored on blocks:
+32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632, 2654208,
+4096000, 7962624
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (32768 blocks): done
+Writing superblocks and filesystem accounting information: done
+[root@linuxprobe ~]# echo "/dev/md0 /RAID ext4 defaults 0 0" >> /etc/fstab
+[root@linuxprobe ~]# mkdir /RAID
+[root@linuxprobe ~]# mount -a
+```
+
+最后是见证奇迹的时刻！我们再次把硬盘设备/dev/sdb移出磁盘阵列，然后迅速查看/dev/md0磁盘阵列的状态，就会发现备份盘已经被自动顶替上去并开始了数据同步。RAID中的这种备份盘技术非常实用，可以在保证RAID磁盘阵列数据安全性的基础上进一步提高数据可靠性，所以，如果公司不差钱的话还是再买上一块备份盘以防万一。
+
+```
+[root@linuxprobe ~]# mdadm /dev/md0 -f /dev/sdb
+mdadm: set /dev/sdb faulty in /dev/md0
+[root@linuxprobe ~]# mdadm -D /dev/md0
+/dev/md0:
+Version : 1.2
+Creation Time : Fri May 8 09:20:35 2017
+Raid Level : raid5
+Array Size : 41909248 (39.97 GiB 42.92 GB)
+Used Dev Size : 20954624 (19.98 GiB 21.46 GB)
+Raid Devices : 3
+Total Devices : 4
+Persistence : Superblock is persistent
+Update Time : Fri May 8 09:23:51 2017
+State : active, degraded, recovering
+Active Devices : 2
+Working Devices : 3
+Failed Devices : 1
+Spare Devices : 1
+Layout : left-symmetric
+Chunk Size : 512K
+Rebuild Status : 0% complete
+Name : linuxprobe.com:0 (local to host linuxprobe.com)
+UUID : 44b1a152:3f1809d3:1d234916:4ac70481
+Events : 21
+Number Major Minor RaidDevice State
+3 8 64 0 spare rebuilding /dev/sde
+1 8 32 1 active sync /dev/sdc
+4 8 48 2 active sync /dev/sdd
+0 8 16 - faulty /dev/sdb
+```
+
+##### 7.2 LVM逻辑卷管理器
+
+LVM（逻辑卷管理器）是硬盘设备资源管理技术，可以允许用户对硬盘资源进行动态调整。
+
+初衷是为了解决硬盘设备在创建分区后不易修改分区大小的缺陷。尽管对传统的硬盘分区进行强制扩容或缩容从理论上来讲是可行的，但是却可能造成数据的丢失。而LVM技术是在硬盘分区和文件系统之间添加了一个逻辑层，它提供了一个抽象的卷组，可以把多块硬盘进行卷组合并。这样一来，用户不必关心物理硬盘设备的底层架构和布局，就可以实现对硬盘分区的动态调整。LVM的技术架构如图
+
+![逻辑卷](pics\逻辑卷.png)
+
+**物理卷（PV）**处于LVM中的最底层，可以将其理解为物理硬盘、硬盘分区或者RAID磁盘阵列，这都可以。**卷组（VG）**建立在物理卷之上，一个卷组可以包含多个物理卷，而且在卷组创建之后也可以继续向其中添加新的物理卷。**逻辑卷（LV）**是用卷组中空闲的资源建立的，并且逻辑卷在建立后可以动态地扩展或缩小空间。这就是LVM的核心理念。
+
+###### 7.2.1 部署逻辑卷
+
+部署LVM时，需要逐个配置物理卷、卷组和逻辑卷。
+
+```
+功能/命令	  物理卷管理		卷组管理		逻辑卷管理
+扫描			pvscan		 vgscan			lvscan
+建立			pvcreate	 vgcreate		lvcreate
+显示			pvdisplay	 vgdisplay		lvdisplay
+删除			pvremove	 vgremove		lvremove
+扩展						 vgextend		lvextend
+缩小						 vgreduce		lvreduce
+```
+
+为了避免多个实验之间相互发生冲突，请大家自行将虚拟机还原到初始状态，并在虚拟机中添加两块新硬盘设备，然后开机。
+
+在虚拟机中添加两块新硬盘设备的目的，是为了更好地演示LVM理念中用户无需关心底层物理硬盘设备的特性。我们先对这两块新硬盘进行创建物理卷的操作，可以将该操作简单理解成让硬盘设备支持LVM技术，或者理解成是把硬盘设备加入到LVM技术可用的硬件资源池中，然后对这两块硬盘进行卷组合并，卷组的名称可以由用户来自定义。接下来，根据需求把合并后的卷组切割出一个约为150MB的逻辑卷设备，最后把这个逻辑卷设备格式化成EXT4文件系统后挂载使用。
+
+**第1步**：让新添加的两块硬盘设备支持LVM技术。
+
+```
+[root@linuxprobe ~]# pvcreate /dev/sdb /dev/sdc
+ Physical volume "/dev/sdb" successfully created
+ Physical volume "/dev/sdc" successfully created
+```
+
+**第2步**：把两块硬盘设备加入到storage卷组中，然后查看卷组的状态。
+
+```
+[root@linuxprobe ~]# vgcreate storage /dev/sdb /dev/sdc
+ Volume group "storage" successfully created
+[root@linuxprobe ~]# vgdisplay
+--- Volume group ---
+ VG Name storage
+ System ID 
+ Format lvm2
+ Metadata Areas 2
+ Metadata Sequence No 1
+ VG Access read/write
+ VG Status resizable
+ MAX LV 0
+ Cur LV 0
+ Open LV 0
+ Max PV 0
+ Cur PV 2
+ Act PV 2
+ VG Size 39.99 GiB
+ PE Size 4.00 MiB
+ Total PE 10238
+ Alloc PE / Size 0 / 0  Free PE / Size 10238 / 39.99 GiB
+ VG UUID KUeAMF-qMLh-XjQy-ArUo-LCQI-YF0o-pScxm1
+………………省略部分输出信息………………
+```
+
+**第3步**：切割出一个约为150MB的逻辑卷设备。
+
+这里需要注意切割单位的问题。在对逻辑卷进行切割时有两种计量单位。第一种是以容量为单位，所使用的参数为-L。例如，使用-L 150M生成一个大小为150MB的逻辑卷。另外一种是以基本单元的个数为单位，所使用的参数为-l。每个基本单元的大小默认为4MB。例如，使用-l 37可以生成一个大小为37×4MB=148MB的逻辑卷。
+
+```
+[root@linuxprobe ~]# lvcreate -n vo -l 37 storage
+ Logical volume "vo" created
+[root@linuxprobe ~]# lvdisplay 
+ --- Logical volume ---
+ LV Path /dev/storage/vo
+ LV Name vo
+ VG Name storage
+ LV UUID D09HYI-BHBl-iXGr-X2n4-HEzo-FAQH-HRcM2I
+ LV Write Access read/write
+ LV Creation host, time localhost.localdomain, 2017-02-01 01:22:54 -0500
+ LV Status available
+ # open 0
+ LV Size 148.00 MiB
+ Current LE 37
+ Segments 1
+ Allocation inherit
+ Read ahead sectors auto
+ - currently set to 8192
+ Block device 253:2
+………………省略部分输出信息………………
+```
+
+**第4步**：把生成好的逻辑卷进行格式化，然后挂载使用。
+
+Linux系统会把LVM中的逻辑卷设备存放在/dev设备目录中（实际上是做了一个符号链接），同时会以卷组的名称来建立一个目录，其中保存了逻辑卷的设备映射文件（即/dev/卷组名称/逻辑卷名称）。
+
+```
+[root@linuxprobe ~]# mkfs.ext4 /dev/storage/vo 
+mke2fs 1.42.9 (28-Dec-2013)
+Filesystem label=
+OS type: Linux
+Block size=1024 (log=0)
+Fragment size=1024 (log=0)
+Stride=0 blocks, Stripe width=0 blocks
+38000 inodes, 151552 blocks
+7577 blocks (5.00%) reserved for the super user
+First data block=1
+Maximum filesystem blocks=33816576
+19 block groups
+8192 blocks per group, 8192 fragments per group
+2000 inodes per group
+Superblock backups stored on blocks: 
+ 8193, 24577, 40961, 57345, 73729
+Allocating group tables: done 
+Writing inode tables: done 
+Creating journal (4096 blocks): done
+Writing superblocks and filesystem accounting information: done 
+[root@linuxprobe ~]# mkdir /linuxprobe
+[root@linuxprobe ~]# mount /dev/storage/vo /linuxprobe
+```
+
+**第5步**：查看挂载状态，并写入到配置文件，使其永久生效。
+
+```
+[root@linuxprobe ~]# df -h
+ Filesystem Size Used Avail Use% Mounted on
+ /dev/mapper/rhel-root 18G 3.0G 15G 17% /
+ devtmpfs 905M 0 905M 0% /dev
+ tmpfs 914M 140K 914M 1% /dev/shm
+ tmpfs 914M 8.8M 905M 1% /run
+ tmpfs 914M 0 914M 0% /sys/fs/cgroup
+ /dev/sr0 3.5G 3.5G 0 100% /media/cdrom
+ /dev/sda1 497M 119M 379M 24% /boot
+ /dev/mapper/storage-vo 145M 7.6M 138M 6% /linuxprobe
+ [root@linuxprobe ~]# echo "/dev/storage/vo /linuxprobe ext4 defaults 0 0" >> /etc/fstab
+```
+
+###### 7.2.2 扩容逻辑卷
+
+用户在使用存储设备时感知不到设备底层的架构和布局，更不用关心底层是由多少块硬盘组成的，只要卷组中有足够的资源，就可以一直为逻辑卷扩容。扩展前请一定要记得卸载设备和挂载点的关联。
+
+```
+[root@linuxprobe ~]# umount /linuxprobe
+```
+
+**第1步**：把上一个实验中的逻辑卷vo扩展至290MB。
+
+```
+[root@linuxprobe ~]# lvextend -L 290M /dev/storage/vo
+ Rounding size to boundary between physical extents: 292.00 MiB
+ Extending logical volume vo to 292.00 MiB
+ Logical volume vo successfully resized
+```
+
+**第2步**：检查硬盘完整性，并重置硬盘容量。
+
+```
+[root@linuxprobe ~]# e2fsck -f /dev/storage/vo
+e2fsck 1.42.9 (28-Dec-2013)
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+/dev/storage/vo: 11/38000 files (0.0% non-contiguous), 10453/151552 blocks
+[root@linuxprobe ~]# resize2fs /dev/storage/vo
+resize2fs 1.42.9 (28-Dec-2013)
+Resizing the filesystem on /dev/storage/vo to 299008 (1k) blocks.
+The filesystem on /dev/storage/vo is now 299008 blocks long.
+```
+
+**第3步**：重新挂载硬盘设备并查看挂载状态。
+
+```
+[root@linuxprobe ~]# mount -a
+[root@linuxprobe ~]# df -h
+Filesystem Size Used Avail Use% Mounted on
+/dev/mapper/rhel-root 18G 3.0G 15G 17% /
+devtmpfs 985M 0 985M 0% /dev
+tmpfs 994M 80K 994M 1% /dev/shm
+tmpfs 994M 8.8M 986M 1% /run
+tmpfs 994M 0 994M 0% /sys/fs/cgroup
+/dev/sr0 3.5G 3.5G 0 100% /media/cdrom
+/dev/sda1 497M 119M 379M 24% /boot
+/dev/mapper/storage-vo 279M 2.1M 259M 1% /linuxprobe
+```
+
+###### 7.2.3 缩小逻辑卷
+
+相较于扩容逻辑卷，在对逻辑卷进行缩容操作时，其丢失数据的风险更大。所以在生产环境中执行相应操作时，一定要提前备份好数据。另外Linux系统规定，在对LVM逻辑卷进行缩容操作之前，要先检查文件系统的完整性（当然这也是为了保证我们的数据安全）。在执行缩容操作前记得先把文件系统卸载掉。
+
+```
+[root@linuxprobe ~]# umount /linuxprobe
+```
+
+**第1步**：检查文件系统的完整性。
+
+```
+[root@linuxprobe ~]# e2fsck -f /dev/storage/vo
+e2fsck 1.42.9 (28-Dec-2013)
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+/dev/storage/vo: 11/74000 files (0.0% non-contiguous), 15507/299008 blocks
+```
+
+**第2步**：把逻辑卷vo的容量减小到120MB。
+
+```
+[root@linuxprobe ~]# resize2fs /dev/storage/vo 120M
+resize2fs 1.42.9 (28-Dec-2013)
+Resizing the filesystem on /dev/storage/vo to 122880 (1k) blocks.
+The filesystem on /dev/storage/vo is now 122880 blocks long.
+[root@linuxprobe ~]# lvreduce -L 120M /dev/storage/vo
+ WARNING: Reducing active logical volume to 120.00 MiB
+ THIS MAY DESTROY YOUR DATA (filesystem etc.)
+Do you really want to reduce vo? [y/n]: y
+ Reducing logical volume vo to 120.00 MiB
+ Logical volume vo successfully resized
+```
+
+**第3步**：重新挂载文件系统并查看系统状态。
+
+```
+[root@linuxprobe ~]# mount -a
+[root@linuxprobe ~]# df -h
+Filesystem Size Used Avail Use% Mounted on
+/dev/mapper/rhel-root 18G 3.0G 15G 17% /
+devtmpfs 985M 0 985M 0% /dev
+tmpfs 994M 80K 994M 1% /dev/shm
+tmpfs 994M 8.8M 986M 1% /run
+tmpfs 994M 0 994M 0% /sys/fs/cgroup
+/dev/sr0 3.5G 3.5G 0 100% /media/cdrom
+/dev/sda1 497M 119M 379M 24% /boot
+/dev/mapper/storage-vo 113M 1.6M 103M 2% /linuxprobe
+```
+
+###### 7.2.4 逻辑卷快照
+
+LVM还具备有“快照卷”功能，该功能类似于虚拟机软件的还原时间点功能。例如，可以对某一个逻辑卷设备做一次快照，如果日后发现数据被改错了，就可以利用之前做好的快照卷进行覆盖还原。LVM的快照卷功能有两个特点：
+
+> 快照卷的容量必须等同于逻辑卷的容量；
+>
+> 快照卷仅一次有效，一旦执行还原操作后则会被立即自动删除。
+
+首先查看卷组的信息。
+
+```
+[root@linuxprobe ~]# vgdisplay
+ --- Volume group ---
+ VG Name storage
+ System ID 
+ Format lvm2
+ Metadata Areas 2
+ Metadata Sequence No 4
+ VG Access read/write
+ VG Status resizable
+ MAX LV 0
+ Cur LV 1
+ Open LV 1
+ Max PV 0
+ Cur PV 2
+ Act PV 2
+ VG Size 39.99 GiB
+ PE Size 4.00 MiB
+ Total PE 10238
+ Alloc PE / Size 30 / 120.00 MiB Free PE / Size 10208 / 39.88 GiB
+ VG UUID CTaHAK-0TQv-Abdb-R83O-RU6V-YYkx-8o2R0e
+………………省略部分输出信息………………
+```
+
+通过卷组的输出信息可以清晰看到，卷组中已经使用了120MB的容量，空闲容量还有39.88GB。接下来用重定向往逻辑卷设备所挂载的目录中写入一个文件。
+
+```
+[root@linuxprobe ~]# echo "Welcome to Linuxprobe.com" > /linuxprobe/readme.txt
+[root@linuxprobe ~]# ls -l /linuxprobe
+total 14
+drwx------. 2 root root 12288 Feb 1 07:18 lost+found
+-rw-r--r--. 1 root root 26 Feb 1 07:38 readme.txt
+```
+
+**第1步**：使用-s参数生成一个快照卷，使用-L参数指定切割的大小。另外，还需要在命令后面写上是针对哪个逻辑卷执行的快照操作。
+
+```
+[root@linuxprobe ~]#  lvcreate -L 120M -s -n SNAP /dev/storage/vo
+ Logical volume "SNAP" created
+[root@linuxprobe ~]# lvdisplay
+--- Logical volume ---
+ LV Path /dev/storage/SNAP
+ LV Name SNAP
+ VG Name storage
+ LV UUID BC7WKg-fHoK-Pc7J-yhSd-vD7d-lUnl-TihKlt
+ LV Write Access read/write
+ LV Creation host, time localhost.localdomain, 2017-02-01 07:42:31 -0500
+ LV snapshot status active destination for vo
+ LV Status available
+ # open 0
+ LV Size 120.00 MiB
+ Current LE 30
+ COW-table size 120.00 MiB
+ COW-table LE 30
+ Allocated to snapshot 0.01%
+ Snapshot chunk size 4.00 KiB
+ Segments 1
+ Allocation inherit
+ Read ahead sectors auto
+ - currently set to 8192
+ Block device 253:3
+………………省略部分输出信息………………
+```
+
+**第2步**：在逻辑卷所挂载的目录中创建一个100MB的垃圾文件，然后再查看快照卷的状态。可以发现存储空间占的用量上升了。
+
+```
+[root@linuxprobe ~]# dd if=/dev/zero of=/linuxprobe/files count=1 bs=100M
+1+0 records in
+1+0 records out
+104857600 bytes (105 MB) copied, 3.35432 s, 31.3 MB/s
+[root@linuxprobe ~]# lvdisplay
+ --- Logical volume ---
+ LV Path /dev/storage/SNAP
+ LV Name SNAP
+ VG Name storage
+ LV UUID BC7WKg-fHoK-Pc7J-yhSd-vD7d-lUnl-TihKlt
+ LV Write Access read/write
+ LV Creation host, time localhost.localdomain, 2017-02-01 07:42:31 -0500
+ LV snapshot status active destination for vo
+ LV Status available
+ # open 0
+ LV Size 120.00 MiB
+ Current LE 30
+ COW-table size 120.00 MiB
+ COW-table LE 30
+ Allocated to snapshot 83.71%
+ Snapshot chunk size 4.00 KiB
+ Segments 1
+ Allocation inherit
+ Read ahead sectors auto
+ - currently set to 8192
+ Block device 253:3
+```
+
+**第3步**：为了校验SNAP快照卷的效果，需要对逻辑卷进行快照还原操作。在此之前记得先卸载掉逻辑卷设备与目录的挂载。
+
+```
+[root@linuxprobe ~]# umount /linuxprobe
+[root@linuxprobe ~]# lvconvert --merge /dev/storage/SNAP
+ Merging of volume SNAP started.
+ vo: Merged: 21.4%
+ vo: Merged: 100.0%
+ Merge of snapshot into logical volume vo has finished.
+ Logical volume "SNAP" successfully removed
+```
+
+**第4步**：快照卷会被自动删除掉，并且刚刚在逻辑卷设备被执行快照操作后再创建出来的100MB的垃圾文件也被清除了。
+
+```
+[root@linuxprobe ~]# mount -a
+[root@linuxprobe ~]# ls /linuxprobe/
+lost+found readme.txt
+```
+
+###### 7.2.5 删除逻辑卷
+
+当生产环境中想要重新部署LVM或者不再需要使用LVM时，则需要执行LVM的删除操作。为此，需要提前备份好重要的数据信息，然后**依次删除逻辑卷、卷组、物理卷设备**，这个顺序不可颠倒。
+
+**第1步**：取消逻辑卷与目录的挂载关联，删除配置文件中永久生效的设备参数。
+
+```
+[root@linuxprobe ~]# umount /linuxprobe
+[root@linuxprobe ~]# vim /etc/fstab
+#
+# /etc/fstab
+# Created by anaconda on Fri Feb 19 22:08:59 2017
+#
+# Accessible filesystems, by reference, are maintained under '/dev/disk'
+# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info
+#
+/dev/mapper/rhel-root / xfs defaults 1 1
+UUID=50591e35-d47a-4aeb-a0ca-1b4e8336d9b1 /boot xfs defaults 1 2
+/dev/mapper/rhel-swap swap swap defaults 0 0
+/dev/cdrom /media/cdrom iso9660 defaults 0 0 
+/dev/storage/vo /linuxprobe ext4 defaults 0 0
+```
+
+**第2步**：删除逻辑卷设备，需要输入y来确认操作。
+
+```
+[root@linuxprobe ~]# lvremove /dev/storage/vo 
+Do you really want to remove active logical volume vo? [y/n]: y
+ Logical volume "vo" successfully removed
+```
+
+**第3步**：删除卷组，此处只写卷组名称即可，不需要设备的绝对路径。
+
+```
+[root@linuxprobe ~]# vgremove storage
+ Volume group "storage" successfully removed
+```
+
+**第4步**：删除物理卷设备。
+
+```
+[root@linuxprobe ~]# pvremove /dev/sdb /dev/sdc
+ Labels on physical volume "/dev/sdb" successfully wiped
+ Labels on physical volume "/dev/sdc" successfully wiped
+```
+
+在上述操作执行完毕之后，再执行lvdisplay、vgdisplay、pvdisplay命令来查看LVM的信息时就不会再看到信息了（前提是上述步骤的操作是正确的）。
+
