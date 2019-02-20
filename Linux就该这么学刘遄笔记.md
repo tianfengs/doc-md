@@ -4583,9 +4583,178 @@ Last login: Wed May 4 07:56:29 2017
 [root@linuxprobe ~]# 
 ```
 
+### 第9章 使用ssh服务管理远程主机
 
+本章讲解了如何使用**nmtui命令**配置网络参数，以及通过**nmcli命令**查看网络信息并管理网络会话服务，从而让您能够在不同工作场景中快速地切换网络运行参数；还讲解了如何手工绑定**mode6模式双网卡**，实现网络的负载均衡。
 
+本章还深入介绍了**SSH协议**与**sshd服务**程序的理论知识、**Linux系统的远程管理**方法以及**在系统中配置服务程序**的方法，并采用实验的形式演示了**使用基于密码验证的sshd服务**程序进行远程登录，以及**使用screen服务**程序远程管理Linux系统的不间断会话等技术。
 
+当读者掌握了本章的内容之后，也就完全具备了对Linux系统进行配置管理的知识。
+
+##### 9.1 配置网卡服务
+
+###### 9.1.1 配置网卡参数
+
+配置网络并确保网络的连通性是学习部署Linux服务之前的最后一个重要知识点。
+
+在RHEL 7系统中有至少5种网络的配置方法。这里教给大家的是使用**nmtui命令**来配置网络。
+
+在服务器主机的网络配置信息中填写IP地址192.168.10.10/24。
+
+只需使用Vim编辑器将网卡配置文件中的ONBOOT参数修改成yes，这样在系统重启后网卡就被激活了。
+
+```
+[root@linuxprobe ~]# vim /etc/sysconfig/network-scripts/ifcfg-eno16777736
+TYPE=Ethernet
+BOOTPROTO=none
+DEFROUTE=yes
+IPV4_FAILURE_FATAL=no
+IPV6INIT=yes
+IPV6_AUTOCONF=yes
+IPV6_DEFROUTE=yes
+IPV6_FAILURE_FATAL=no
+NAME=eno16777736
+UUID=ec77579b-2ced-481f-9c09-f562b321e268
+ONBOOT=yes
+IPADDR0=192.168.10.10
+HWADDR=00:0C:29:C4:A4:09
+PREFIX0=24
+IPV6_PEERDNS=yes
+IPV6_PEERROUTES=yes
+```
+
+要想让服务程序获取到最新的配置文件，需要手动重启相应的服务，之后就可以看到网络畅通了：
+
+```
+[root@linuxprobe ~]# systemctl restart network
+[root@linuxprobe ~]# ping -c 4 192.168.10.10
+PING 192.168.10.10 (192.168.10.10) 56(84) bytes of data.
+64 bytes from 192.168.10.10: icmp_seq=1 ttl=64 time=0.056 ms
+```
+
+###### 9.1.2 创建网络会话
+
+RHEL和CentOS系统默认使用**NetworkManager**来提供网络服务，这是一种动态管理网络配置的守护进程，能够让网络设备保持连接状态。可以使用**nmcli命令**来管理Network Manager服务。nmcli是一款基于命令行的网络配置工具，功能丰富，参数众多。它可以轻松地查看网络信息或网络状态：
+
+```
+[root@linuxprobe ~]# nmcli connection show
+NAME UUID TYPE DEVICE 
+eno16777736 ec77579b-2ced-481f-9c09-f562b321e268 802-3-ethernet eno16777736 
+[root@linuxprobe ~]# nmcli con show eno16777736
+connection.id: eno16777736
+connection.uuid: ec77579b-2ced-481f-9c09-f562b321e268
+connection.interface-name: --
+```
+
+另外，RHEL7系统支持网络会话功能，允许用户在多个配置文件中快速切换（非常类似于firewalld防火墙服务中的区域技术）。如果我们在公司网络中使用笔记本电脑时需要手动指定网络的IP地址，而回到家中则是使用DHCP自动分配IP地址。这就需要麻烦地频繁修改IP地址，但是使用了网络会话功能后一切就简单多了—只需在不同的使用环境中激活相应的网络会话，就可以实现网络配置信息的自动切换了。
+
+可以使用nmcli命令并按照“**connection add con-name xxxx type xxxx ifname xxxx**”的格式来创建网络会话。假设将公司网络中的网络会话称之为company，将家庭网络中的网络会话称之为house，现在依次创建各自的网络会话。
+
+使用con-name参数指定公司所使用的网络会话名称company，然后依次用ifname参数指定本机的网卡名称（千万要以实际环境为准，不要照抄书上的eno16777736），用autoconnect no参数设置该网络会话默认不被自动激活，以及用ip4及gw4参数手动指定网络的IP地址：
+
+```
+[root@linuxprobe ~]# nmcli connection add con-name company ifname eno16777736 autoconnect no type ethernet ip4 192.168.10.10/24 gw4 192.168.10.1
+Connection 'company' (86c71220-0057-419e-b615-38f4014cfdee) successfully added.
+
+[root@linuxprobe ~]# nmcli connection add con-name house type ethernet ifname eno16777736
+Connection 'house' (44acf0a7-07e2-40b4-94ba-69ea973090fb) successfully added.
+```
+
+在成功创建网络会话后，可以使用nmcli命令查看创建的所有网络会话：
+
+```
+[root@linuxprobe ~]# nmcli connection show
+NAME UUID TYPE DEVICE 
+house        44acf0a7-07e2-40b4-94ba-69ea973090fb 802-3-ethernet -- 
+company      86c71220-0057-419e-b615-38f4014cfdee 802-3-ethernet -- 
+eno16777736  ec77579b-2ced-481f-9c09-f562b321e268 802-3-ethernet eno16777736 
+```
+
+能自动通过DHCP获取到IP地址了。
+
+```
+[root@linuxprobe ~]# nmcli connection up house 
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/2)
+[root@linuxprobe ~]# ifconfig
+eno1677773628: flags=4163<UP,BROADCAST,RUNNING,MULTICAST> mtu 1500
+ inet 192.168.100.128 netmask 255.255.255.0 broadcast 192.168.100.255
+```
+
+如果大家使用的是虚拟机，请把虚拟机系统的网卡（网络适配器）切换成桥接模式 ???
+
+###### 9.1.3 绑定两块网卡
+
+一般来讲，生产环境必须提供7×24小时的网络传输服务。借助于网卡绑定技术，不仅可以提高网络传输速度，更重要的是，还可以确保在其中一块网卡出现故障时，依然可以正常提供网络服务。假设我们对两块网卡实施了绑定技术，这样在正常工作中它们会共同传输数据，使得网络传输的速度变得更快；而且即使有一块网卡突然出现了故障，另外一块网卡便会立即自动顶替上去，保证数据传输不会中断。
+
+**第1步**：在虚拟机系统中再添加一块网卡设备，请确保两块网卡都处在同一个网络连接中（即网卡模式相同），如图9-10和图9-11所示。处于相同模式的网卡设备才可以进行网卡绑定，否则这两块网卡无法互相传送数据。
+
+**第2步**：使用Vim文本编辑器来配置网卡设备的绑定参数。网卡绑定的理论知识类似于前面学习的RAID硬盘组，我们需要对参与绑定的网卡设备逐个进行“初始设置”。需要注意的是，这些原本独立的网卡设备此时需要被配置成为一块“从属”网卡，服务于“主”网卡，不应该再有自己的IP地址等信息。在进行了初始设置之后，它们就可以支持网卡绑定。
+
+```
+[root@linuxprobe ~]# vim /etc/sysconfig/network-scripts/ifcfg-eno16777736
+TYPE=Ethernet
+BOOTPROTO=none
+ONBOOT=yes
+USERCTL=no
+DEVICE=eno16777736
+MASTER=bond0
+SLAVE=yes
+[root@linuxprobe ~]# vim /etc/sysconfig/network-scripts/ifcfg-eno33554968
+TYPE=Ethernet
+BOOTPROTO=none
+ONBOOT=yes
+USERCTL=no
+DEVICE=eno33554968
+MASTER=bond0
+SLAVE=yes
+```
+
+**第3步**：让Linux内核支持网卡绑定驱动。常见的网卡绑定驱动有三种模式—mode0、mode1和mode6。下面以绑定两块网卡为例，讲解使用的情景。
+
+> mode0（平衡负载模式）：平时两块网卡均工作，且自动备援，但需要在与服务器本地网卡相连的交换机设备上进行端口聚合来支持绑定技术。
+>
+> mode1（自动备援模式）：平时只有一块网卡工作，在它故障后自动替换为另外的网卡。
+>
+> mode6（平衡负载模式）：平时两块网卡均工作，且自动备援，无须交换机设备提供辅助支持。
+
+比如有一台用于提供NFS或者samba服务的文件服务器，它所能提供的最大网络传输速度为100Mbit/s，但是访问该服务器的用户数量特别多，那么它的访问压力一定很大。在生产环境中，网络的可靠性是极为重要的，而且网络的传输速度也必须得以保证。针对这样的情况，比较好的选择就是mode6网卡绑定驱动模式了。因为mode6能够让两块网卡同时一起工作，当其中一块网卡出现故障后能自动备援，且无需交换机设备支援，从而提供了可靠的网络传输保障。
+
+下面使用Vim文本编辑器创建一个用于网卡绑定的驱动文件，使得绑定后的bond0网卡设备能够支持绑定技术（bonding）；同时定义网卡以mode6模式进行绑定，且出现故障时自动切换的时间为100毫秒。
+
+```
+[root@linuxprobe ~]# vim /etc/modprobe.d/bond.conf
+alias bond0 bonding
+options bond0 miimon=100 mode=6
+```
+
+**第4步**：重启网络服务后网卡绑定操作即可成功。正常情况下只有bond0网卡设备才会有IP地址等信息：
+
+```
+[root@linuxprobe ~]# systemctl restart network
+[root@linuxprobe ~]# ifconfig
+bond0: flags=5187<UP,BROADCAST,RUNNING,MASTER,MULTICAST> mtu 1500
+inet 192.168.10.10 netmask 255.255.255.0 broadcast 192.168.10.255
+inet6 fe80::20c:29ff:fe9c:637d prefixlen 64 scopeid 0x20<link>
+ether 00:0c:29:9c:63:7d txqueuelen 0 (Ethernet)
+RX packets 700 bytes 82899 (80.9 KiB)
+RX errors 0 dropped 6 overruns 0 frame 0
+TX packets 588 bytes 40260 (39.3 KiB)
+TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0
+
+eno16777736: flags=6211<UP,BROADCAST,RUNNING,SLAVE,MULTICAST> mtu 1500
+ether 00:0c:29:9c:63:73 txqueuelen 1000 (Ethernet)
+RX packets 347 bytes 40112 (39.1 KiB)
+RX errors 0 dropped 6 overruns 0 frame 0
+TX packets 263 bytes 20682 (20.1 KiB)
+TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0
+
+eno33554968: flags=6211<UP,BROADCAST,RUNNING,SLAVE,MULTICAST> mtu 1500
+ether 00:0c:29:9c:63:7d txqueuelen 1000 (Ethernet)
+RX packets 353 bytes 42787 (41.7 KiB)
+RX errors 0 dropped 0 overruns 0 frame 0
+TX packets 325 bytes 19578 (19.1 KiB)
+TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0
+```
 
 
 
