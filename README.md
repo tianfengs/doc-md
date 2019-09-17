@@ -12,3 +12,26 @@
 ```
 git config --global core.quotepath false
 ```
+
+sdfsdf
+
+sdfsdfsdfsdf  
+sdfsdfsdf
+fsdfsd
+
+`sfsdfsdf`
+
+``sdfsfsdfsdfsdfsdfsd``
+
+```
+​```php   
+echo "php is the best language. ";
+int main()
+{
+	int a = 0;
+	int b =1;
+	printf("a+b=%a",a+b);
+}
+​```
+```
+
