@@ -15,11 +15,11 @@ typora-copy-images-to: pics
 
      三个步骤：
 
-     - 在主机上编译Bootloader，然后通过JTAG少如开发板
+     - 在主机上编译Bootloader，然后通过JTAG烧入开发板
 
        应具备串口传输、网络传输、烧写Flash功能
 
-     - 在主机上编译嵌入式Linux内核，通过BootLoader少如单板或直接启动
+     - 在主机上编译嵌入式Linux内核，通过BootLoader烧入单板或直接启动
 
        内核应支持网络文件系统NFS
 
@@ -43,33 +43,19 @@ typora-copy-images-to: pics
      目标板要求：
 
      - S3C2410或S3C2440
-     
      - 64MB SDRAM
-     
      - 1MB NOR Flash
-     
      - 64MB NAND Flash
-     
      - 两个网卡(10MB/100MB)
-     
      - 5个串口（内置3个，外扩2个）
-
      - 音频输入输出
-     
      - 2.5吋IDE接口
-     
      - 标准SD/MMC卡座
-     
      - 4个GPIO按键/4个GPIO按键
-     
-     - 外接
-     $$
-     I^2C
-     $$
-        接口的实时时钟（RTC）芯片
-     
-       将主机与目标板通过JTAG、串口线（接单板上的串口0）、网线（接单板上的网卡0）连接起来，将各类设备连接到目标板上去即可。
+     - 外接*I[^2]C*  接口的实时时钟（RTC）芯片
 
+       将主机与目标板通过JTAG、串口线（接单板上的串口0）、网线（接单板上的网卡0）连接起来，将各类设备连接到目标板上去即可。
+   
 2. 软件环境构建
 
    - 主机linux操作系统的安装
@@ -339,13 +325,28 @@ $ sudo chown book:book /work -R
        #if,#ifdef	条件编译命令
        ```
      
-       预处理就是将包含的文件插入源文件中、将宏定义展开、根据条件编译命令选择要使用的命令，最后将这些代码输出到```.i``` 文件中。预处理将用到```arm-linux-gcc```工具。
+       预处理就是将包含的文件插入源文件中、将宏定义展开、根据条件编译命令选择要使用的命令，最后将这些代码输出到```.i``` 文件中。<u>**预处理用到```arm-linux-gcc```工具**</u>。
      
-     - 编译（compilation），就是把c/c++代码（例如```.i```文件）翻译成汇编代码，使用到的工具为```ccl```。
+     - 编译（compilation），就是把c/c++代码（例如```.i```文件）翻译成汇编代码（`.s`或`.S`文件），<u>**编译用到```ccl```工具**</u>。
      
-     - 汇编（assembly），就是把汇编代码，翻译成复合一定格式的机器代码，在Linux上一般为"ELF"目标文件（OBJ文件），用到的工具为```arm-linux-as```。“反汇编”是指将机器代码转换为汇编代码，调试程序时常用到。
+     - 汇编（assembly），就是把汇编代码，翻译成复合一定格式的机器代码，在Linux上一般为**"ELF"目标文件**（OBJ文件），<u>**汇编用到```arm-linux-as```工具**</u>。“反汇编”是指将机器代码转换为汇编代码，调试程序时常用到，<u>**反汇编用到```arm-linux-objdump```工具**</u>，生成`.dis`文件。
      
-     - 连接（linking），就是讲OBJ文件和系统库的OBJ文件、库文件连接起来，最终生成可以在特定平台运行的个执行文件，用到的工具为```arm-linux-ld```。
+     - 连接（linking），就是讲OBJ文件和系统库的OBJ文件、库文件连接起来，最终生成可以在特定平台运行的个执行文件，<u>**连接用到```arm-linux-ld```工具**</u>。
+     
+       连接之后，可以使用`arm-linux-objcopy`工具，把`elf`格式的二进制文件，转换成`bin`格式的二进制文件，然后再烧录到目标板上，进行执行。
+     
+       例如：点亮Led灯的`Makefile`文件
+     
+       ```makefile
+       led_on.bin : crt0.S led_on_c.c
+       	arm-linux-gcc -g -c -o crt0.o crt0.S									编译
+          	arm-linux-gcc -g -c -o led_on_c.o led_on_c.c							 编译
+          	arm-linux-ld -Ttext 0x00000000 -g crt0.o led_on_c.o -o led_on_c_elf	 	   连接
+          	arm-linux-objcopy -O binary -S led_on_c_elf led_on_c.bin 			转为二进制bin
+          	arm_linux-objdump -D -m arm led_on_c_elf > led_on_c.dis				转为汇编码
+       clean:
+          	rm -f led_on_c.dis led_on_c.bin led_on_c_elf *.o
+       ```
      
      - 输入文件列表：
      
@@ -378,6 +379,7 @@ $ sudo chown book:book /work -R
      	return 0;
      }
      
+     ////////////////////////////////////////////////////
      // 使用arm-linux-gcc直接生成hello，包含以上四个步骤
      $ arm-linux-gcc -o hello hello.c
      // 想观看编译细节，加入-v选项
@@ -406,7 +408,7 @@ $ sudo chown book:book /work -R
      	sub_fun();
      	return 0;
      }
-     
+    
      File2: sub.h
      void sub_fun(void);
      
@@ -421,65 +423,63 @@ $ sudo chown book:book /work -R
      $ gcc -c -o sub.o sub.c
      $ gcc -o test main.o sub.o
      ```
-       ```
-
-         ```xml
-         使用Code::Blocks，增加子程序文件时，要在项目文件 subfunc.cbp文件中增加sub.c文件编译的设置：
-         <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-         <CodeBlocks_project_file>
-            <FileVersion major="1" minor="6" />
-            <Project>
-                <Option title="subfunc" />
-                <Option pch_mode="2" />
-                <Option compiler="gcc" />
-                <Build>
-                    <Target title="Debug">
-                        <Option output="bin/Debug/subfunc" prefix_auto="1" extension_auto="1" />
-                        <Option object_output="obj/Debug/" />
-                        <Option type="1" />
-                        <Option compiler="gcc" />
-                        <Compiler>
-                            <Add option="-g" />	<!-- 以操作系统的本地格式（stabs，COFF或DWARF）
+       ```xml
+   使用Code::Blocks，增加子程序文件时，要在项目文件 subfunc.cbp文件中增加sub.c文件编译的设置：
+     <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+     <CodeBlocks_project_file>
+         <FileVersion major="1" minor="6" />
+         <Project>
+             <Option title="subfunc" />
+             <Option pch_mode="2" />
+             <Option compiler="gcc" />
+             <Build>
+                 <Target title="Debug">
+                     <Option output="bin/Debug/subfunc" prefix_auto="1" extension_auto="1" />
+                     <Option object_output="obj/Debug/" />
+                     <Option type="1" />
+                     <Option compiler="gcc" />
+                     <Compiler>
+                         <Add option="-g" />	<!-- 以操作系统的本地格式（stabs，COFF或DWARF）
                                                     产生调试信息，GDB能够使用这些调试信息 -->
-                        </Compiler>
-                    </Target>
-                    <Target title="Release">
-                        <Option output="bin/Release/subfunc" prefix_auto="1" 
-                                 extension_auto="1" />
-                        <Option object_output="obj/Release/" />
-                        <Option type="1" />
-                        <Option compiler="gcc" />
-                        <Compiler>
-                            <Add option="-O2" />	<!-- 除空间和速度优化外，执行所有优化。如不进行循
+                     </Compiler>
+                 </Target>
+                 <Target title="Release">
+                     <Option output="bin/Release/subfunc" prefix_auto="1" 
+                             extension_auto="1" />
+                     <Option object_output="obj/Release/" />
+                     <Option type="1" />
+                     <Option compiler="gcc" />
+                     <Compiler>
+                         <Add option="-O2" />	<!-- 除空间和速度优化外，执行所有优化。如不进行循
                                               环展开（loop unrolling）和函数内嵌（inlining）。 -->
-                        </Compiler>
-                        <Linker>
-                            <Add option="-s" />	<!-- 连接汇编后生成的二进制文件时，把符号表等信息
-                            					从可执行文件中删去，生成文件就不能用gdb来调试了 -->
-                        </Linker>
-                    </Target>
-                </Build>
-                <Compiler>
-                    <Add option="-Wall" />		<!-- 编译时，增加所有警告提示 -->
-                </Compiler>        
-                <Unit filename="main.c">
-                    <Option compilerVar="CC" />
-                </Unit>
-                 <!-- start 此处增加 sub.c 子类文件编译的 文件名，否则不进行此文件编译，在ln时，会报错 -->
-                <Unit filename="sub.c">
-                    <Option compilerVar="CC" />
-                </Unit>
-                 <!-- end -->
-                <Extensions>
-                    <code_completion />
-                    <envvars />
-                    <debugger />
-                    <lib_finder disable_auto="1" />
-                </Extensions>
-            </Project>
-         </CodeBlocks_project_file>
+                     </Compiler>
+                     <Linker>
+                         <Add option="-s" />	<!-- 连接汇编后生成的二进制文件时，把符号表等信息
+                                 从可执行文件中删去，生成文件就不能用gdb来调试了 -->
+                     </Linker>
+                 </Target>
+             </Build>
+             <Compiler>
+                 <Add option="-Wall" />		<!-- 编译时，增加所有警告提示 -->
+             </Compiler>        
+             <Unit filename="main.c">
+                 <Option compilerVar="CC" />
+             </Unit>
+             <!-- start 此处增加 sub.c 子类文件编译的文件名，否则不进行此文件编译，在ld时，会报错 -->
+             <Unit filename="sub.c">
+                 <Option compilerVar="CC" />
+             </Unit>
+             <!-- end -->
+             <Extensions>
+                 <code_completion />
+                 <envvars />
+                 <debugger />
+                 <lib_finder disable_auto="1" />
+             </Extensions>
+         </Project>
+     </CodeBlocks_project_file>
        ```
-   
+     
    - 警告选项（Warning Option）
    
      "-Wall"选项，打开所有警告信息，如：没有指定类的声明、在声明之前就使用的函数、未使用的局部变量等。
@@ -644,36 +644,36 @@ $ sudo chown book:book /work -R
    
      arm-linux-ld用于将多个目标文件、库文件连接成可执行文件，大多选项在上面已经介绍。
    
-     -T 选项，可以直接使用它来指定代码段、数据段、bss段的其实地址，也可以用来指定一个连接脚本，在连接脚本中进行更复杂的地址设置。
+     -T 选项，可以直接使用它来指定代码段、数据段、bss段的起始地址，也可以用来指定一个连接脚本，在连接脚本中进行更复杂的地址设置。
    
      > **bss段**（bss segment）：通常指用来存放程序中未初始化的全局变量的一块内存区域。
      >
-     > ​							bss是 Block Started  by Symbol。属于静态内存分配（即程序一开始将其清零）。
+     > bss是 Block Started  by Symbol。属于静态内存分配（即程序一开始将其清零）。
      >
      > **data段**：通常指用来存放程序中已初始化的全局变量的一块内存区域。属于静态内存分配
      >
-     > **text段、代码段**：通常指用来存放程序执行代码的一块内存区域。通常为只读。
+  > **text段、代码段**：通常指用来存放程序执行代码的一块内存区域。通常为只读。
      >
      > **堆heep**：用于存放进程运行中动态分配的内存段。用malloc等函数分配内存到堆上，用free从堆上释放内存。
      >
      > **栈stack、堆栈**：是用户存放临时创建的局部变量的。函数被调用时，参数被压入发起调用的进程栈中，调用结束后，函数的返回值也会被存放在栈中。堆栈的FIFO特性，特别方便保存/恢复调用现场，从这个意义上讲，可以把堆栈看成一个 **寄存、交换临时数据的内存区**。
-   
+
      **-T 选项，只用于连接Bootloader、内核等“没有底层软件支持”的软件；连接运行于操作系统之上的应用程序，无需指定 -T 选项。** 
-   
+       
      - 直接指定代码段、数据段、bss段的起始地址
-   
+       
          ```shell
          -Ttext startaddr
          -Tdata startaddr
          -Tbss startaddr
-
+       
          startaddr是一个16进制数
          在/work/hardware/led_on/Makefile中，有如下语句：
             arm-linux-ld -Ttext 0x0000000 -g led_on.o -o led_on_elf
          ```
-   
+       
      - 举例说明“-Ttext”选项的作用。在/work/hardware/link目录下有个link.s文件：
-   
+       
        ```assembly
        .text
        .global _start
@@ -684,9 +684,9 @@ $ sudo chown book:book /work -R
        step2:
        	b step2
        ```
-   
+       
        使用下面的命令编译、连接、反汇编：
-   
+       
        ```shell
        arm-linux-gcc -c -o link.o link.s
        arm-linux-ld -Ttext 0x00000000 link.o -o link_elf_0x00000000
@@ -694,9 +694,9 @@ $ sudo chown book:book /work -R
        arm-linux-objdump -D link_elf_0x00000000 > link_0x00000000.dis
        arm-linux-objdump -D link_elf_0x30000000 > link_0x30000000.dis
        ```
-   
+       
        link.s中用到两种跳转方法：b跳转指令、直接向pc寄存器赋值。（***位置跳转***）
-   
+
    - 使用连接脚本设置地址
    
      例如：Makefile中可以这样写
@@ -710,7 +710,7 @@ $ sudo chown book:book /work -R
    
      timer.lds脚本内容如下：
    
-     ```lisp
+     ```js
      SECTIONS {
      	. = 0x30000000;						当前运行地址
      	.text	:	{ *(.text) }			内容为“*（.text)”，表示所有输入文件的代码段。
@@ -723,10 +723,10 @@ $ sudo chown book:book /work -R
      连接脚本格式：
    
      - 基本命令时 SECTIONS命令，描述了输出文件的"映射图"：输出文件中个段、各文件怎么放置。
-   
+     
      - 一个SECTIONS命令内部包含一个或多个段（Section），段是连接脚本的基本单元，表示输入文件中的某部分怎么放置。完整的连接脚本格式如下：
-   
-       ```
+     
+       ```less
        SECTIONS {
        ...
        secname start ALIGN(align) (NOLOAD) : AT(ldadr)
@@ -734,22 +734,24 @@ $ sudo chown book:book /work -R
        ...
        }
        ```
-   
+     
        **secname**（段名）和**contents**（放入此段的代码内容）是必需的。
-   
+     
        **start**是这个段重定位地址，也称**运行地址**。如果代码中有位置无关的指令，程序在运行时，这个段必须放在这个地址上。
-   
+     
+       **contents**用来确定代码中的什么部分放在这个段中。
+     
        **ALIGN（align）**：start指定了运行地址，但仍可使用BLOCK（align）来指定对齐的要求——这个对齐地址才是真正的运行地址。例如：上例中，如果.text段地址范围为0x30000000-0x300003f1，则 .rodata 段的地址是4字节对齐后的0x300003f4。
-   
+     
        **（NOLOAD）**：告诉加载器，在运行时不用加载这个段，只有在操作系统下才有意义。
-   
+       
        **AT(ldadr)**：指定这个段在编译出来的映象文件中的地址——加载地址（load address）。通过这个选项，可以控制隔断分别保存输出文件中不同的位置，便于把文件保存到单板上：A段放在A处，B段放在B处，运行前再把A、B段分别读出来组装成一个完整的执行程序。
      
    - arm-linux-objcopy选项
    
      `arm-linux-objcopy` 用来复制一个目标文件的内容到另一个文件中，可以进行格式转换。格式如下：
    
-     ```
+     ```shell
      arm-linux-objcopy	[-F bfdname | --target=bfdname]
      				   [-I bfdname | --input-target=bfdname]
      				   ...
@@ -758,40 +760,40 @@ $ sudo chown book:book /work -R
      ```
    
      - input-file、outfile
-   
+     
        源文件、目标文件，目标文件系统可以自动生成
-   
+     
      - -l bfdname 或 --input-target=bfdname
-   
+     
        指明源文件的格式，bfdname是BFD库中描述的标准格式名。如果不指明，arm-linux-objcopy会自己去分析。
-   
+     
      - -O bfdname 或--output-target=bfdname
-   
+     
        指明目标文件格式。
-   
+     
      - -F bfdname 或--target=bfdname
-   
+     
        同时指明源文件、目标文件的格式。复制过程不进行格式转换。
-   
+     
      - -R sectionname 或 --remove-section=sectionname
-   
+     
        从输出文件中删掉所有名为sectionname的段，此选项可多次使用。（！危险指令！）
-   
+     
      - -S 或 --strip-all
-   
+     
        不从源文件中复制重定位信息和符号信息到目标文件中去
-   
+     
      - -g或--strip-debug
-   
+     
        不从源文件复制调试符号到目标文件中去。
-   
-     - 举例
-   
+     
+     - **举例(！！！很常用)** 
+     
        ```shell
        在编译bootloader、内核时，常用arm-linux-objcopy命令将ELF格式的生成结果转换为二进制文件：
        $ arm-linux-objcopy -O binary -S elf_file bin_file
        ```
-   
+     
        > ELF格式：是一种用于二进制、可执行文件、目标代码、共享库和核心转储格式文件。
        >
        > ​				 是Liunx的主要可执行文件格式。
@@ -808,43 +810,43 @@ $ sudo chown book:book /work -R
      ```
    
      - **-b** bfdname 或 --target=bfdname
-   
+     
        指定目标码格式。因其能自动识别，所以不是必须的。可以用`arm-linux-objdump -i`查看支持的目标码格式列表。
-   
+     
      - --disassemble 或 -d
-   
+     
        反汇编可执行代码段(executable sections)
-   
+     
      - --disassemble-all 或 **-D** 
-   
+     
        反汇编所有段
-   
+     
      - -EB 或 -EL 或 --endian={big | little}
-   
+     
        指定字节序
-   
+     
      - --file-headers 或 -f
-   
+     
        显示文件的整体头部摘要信息
-   
+     
      - --section-headers、--headers 或 -h
-   
+     
        显示目标文件各个段的头部摘要信息你
-   
+     
      - --info 或 -i
-   
+     
        显示支持的目标文件格式和CPU架构，它们在"-b"、"-m"选项中用到。
-   
+     
      - --section=name 或 -j name
-   
+     
        仅显示指定section的信息
-   
+     
      - --architecture=machine 或 **-m** machine
-   
+     
        指定反汇编目标文件时使用的架构。可以用"-i"列出这里能够指定的架构。
-   
+     
      - 在调试程序时，常用`arm-linux-objdump`命令来得到汇编代码：
-   
+     
        ```shell
        1. 将ELF格式的文件转换为反汇编文件：
        $ arm-linux-objdump -D elf_file > dis_file
@@ -872,7 +874,7 @@ $ sudo chown book:book /work -R
      
      1. 31.28=0b1110,表示这条指令 无条件执行
      2. 25=0b1，表示Operand2是一个立即数。
-     3. 24..21=0b1101,表示这是MOV指令，即Rd：=Op2
+     3. 24..21=0b1101,表示这是MOV指令，即Rd:=Op2
      4. 20=0b0,表示这条指令执行时，不影响状态位
      5. 15..12=0b0010,表示Rd就是r2
      6. 11...0=0x44e,这是一个立即数。高4位为rotate_imm，低8位为immed_8。
@@ -886,9 +888,9 @@ $ sudo chown book:book /work -R
      即
      mov r2, #1308622848
      ```
-   
+
    ​	![1565932001023](/1565932001023.png) 
-   
+
 2. Makefile介绍
 
    在Linux中，用make命令来编译程序，make命令依赖于定制的Makefile文件，例如：
@@ -960,7 +962,7 @@ $ sudo chown book:book /work -R
        
        在“text”中替换符合“pattern”的字，用replacement替换。可用通配符。
        $(patsubst pattern,replacement,text)	
-       例如：$(patsubst %.c,%.o,x.c.c bar.c)
+       例如：$(patsubst %.c, %.o, x.c.c bar.c)
        结果为："x.c.o bar.o"
        
        去掉前后空格,并将中间的多个空格压缩为单个空格。
@@ -977,14 +979,12 @@ $ sudo chown book:book /work -R
        （同上）但去除符合此格式的字
        $(filter-out pattern...,text)
        
-       
-     
-         按字母顺序排序
-           $(sort list)
-         例如：$(sort foo bar lose)
-           结果为："bar foo lose"。
+       按字母顺序排序
+     $(sort list)
+       例如：$(sort foo bar lose)
+       结果为："bar foo lose"。
        ```
-     
+       
      - 文件名函数
      
        ```makefile
@@ -1032,7 +1032,7 @@ $ sudo chown book:book /work -R
      $(origin variable)
        
        4. 执行shell命令,执行外部控制台命令
-         $(shell command arguments)
+       $(shell command arguments)
        ```
        
      - Makefile范例
@@ -1060,7 +1060,7 @@ $ sudo chown book:book /work -R
          - "$<"，第一个依赖的文件名
        
        “%”通配符，表示任意个数的字符。
-   
+     
      
    
 3. 常用ARM汇编指令及ATPCS规则
@@ -1081,14 +1081,14 @@ $ sudo chown book:book /work -R
    
            mov指令可以把一个寄存器的值赋值给另一个寄存器，或者把一个常数赋给寄存器。
    
-           ```
+           ```assembly
         mov r1, r2		/* r1=r2 */
-           mov r1, #4096	/* r1=4096 */
+        mov r1, #4096	/* r1=4096 */
         ```
    
            mov指令传送的常数必须能用立即数来表示，当不知道是否能用立即数表示时，可以使用ldr命令来赋值——此时为伪指令，第二个参数前面有“=”时。
    
-           ```
+           ```assembly
            	ldr r1, =4097	/* r1=4097 将常数赋值给寄存器r1*/
            
            	ldr r1, =label	/* 获得代码的绝对地址 */
@@ -1114,11 +1114,11 @@ $ sudo chown book:book /work -R
    
            ldm和stm是批量内存访问指令：
    
-           ```assembly
+           ```scss
            ldm{cond}<addressing_mode> <rn>{!} <register list>{^}
            stm{cond}<addressing_mode> <rn>{!} <register list>{^}
            
-           {cond}:指令执行条件，条件码。2^4个条件码(见下面表3.2)
+           {cond}:指令执行条件，条件码。2[^4]个条件码(见下面表3.2)
            <addressing_mode> ： 地址变化模式
            	- ia:Increment After
            	- ib:Increment Before
@@ -1239,7 +1239,7 @@ $ sudo chown book:book /work -R
    
         - 寄存器r13用作**数据栈**指针，别名**sp**。在子程序中**r13不能用作其它用途**，它的值在进入、退出子程序时 必需相等
    
-        - 寄存器r14成为连接寄存器，别名lr。用于保存程序的**返回地址**。
+        - 寄存器r14称为连接寄存器，别名lr。用于保存程序的**返回地址**。
    
           如果在子程序中保存了返回地址(比如：将lr值保存到数据栈中)，r14可以用作其它用途
    
@@ -1280,7 +1280,7 @@ $ sudo chown book:book /work -R
    
         实例：
    
-        ```
+        ```assembly
         假设CopyCode2SDRAM函数使用C语言实现的，它的数据原型如下：
         int CopyCode2SDRM(unsigned char *buf, unsigned long start_addr, int size)
         
@@ -1290,9 +1290,12 @@ $ sudo chown book:book /work -R
         mov r2, #16*1024		@ 3. 复制长度 = 16k							size
         b1	CopyCode2SDRAM		@ 调用C函数CopyCode2SDRAM
         cmp a0, #0				@ 判断函数返回值
+        ... ...
         ```
-   
+   ```
         
+        
+   ```
 
 ### 第4章 Windows、Linux环境下相关工具、命令的使用
 
@@ -1324,7 +1327,7 @@ $ sudo chown book:book /work -R
 
    4. grep、find
 
-      ```
+      ```shell
       grep "request_irq" * -R		在当前目录下（*），递归（-R）查找“request_irq"字样的文件
       
       grep "request_irq" kernel -R	在当前目录下的kernel子目录下递归查找
@@ -1336,7 +1339,7 @@ $ sudo chown book:book /work -R
 
    5. tar
 
-      ```
+      ```shell
       tar czvf test.tar.gz dirA	// 将目录dirA压缩，c创建、z以gzip方式、v显示执行过程、f文件
       tar cjvf test.tar.bz2 dirA	// 同上，以bz2格式压缩
       
@@ -1347,7 +1350,7 @@ $ sudo chown book:book /work -R
 
       diff制作补丁文件，patch打补丁命令
 
-      ```
+      ```shell
       // 生成linux-2.6.22.6 升级为 linux-2.6.22.6_ok 的补丁文件linux_2.6.22.6_ok.diff
       diff -urNwB linux-2.6.22.6 linux-2.6.22.6_ok > linux_2.6.22.6_ok.diff
       
@@ -1396,7 +1399,7 @@ $ sudo chown book:book /work -R
 
       **GPxCON寄存器**用于选择引脚功能，**GPxDAT**用于读写引脚数据，**GPxUP**用于确定是否使用内部上拉电阻。
 
-      x为A、B、...、H/J，没有GPAUP寄存器。
+      x为A、B、...、H/J。没有GPAUP寄存器。
 
       - GPxCON寄存器
 
@@ -1457,113 +1460,111 @@ $ sudo chown book:book /work -R
 
         ##### 访问寄存器的方法：
 
-        ​					**通过软件读写它们的地址**。（见对应的芯片手册，本书见S3C2440A芯片手册）
+        ​					**通过软件读写它们的地址**。（见对应的芯片手册，本书见"CPU三星S3C2440A芯片手册"）
       
         
       
         比如：S3C2410和S3C2440的**GPBCON**、**GPBDAT**寄存器地址是**0x56000010**和**0x56000014**，可以通过如下指令让GPB5输出低电平，点亮LED1：
       
         ```c
-      	 #define GPBCON		(*(volatile unsigned long *)0x56000010)
+      	#define GPBCON		(*(volatile unsigned long *)0x56000010)
         #define GPBDAT		(*(volatile unsigned long *)0x56000014)
-      	 #define GPB5_out	(1<<(5*2))	// 0000 0100 0000 0000 （GPB5的位置为输出）
+      	#define GPB5_out	(1<<(5*2))	// 0000 0100 0000 0000 （GPB5的位置为输出01）
         GPBCON = GPB5_out;	// 设置GPB5为输出
-      	 GPBDAT &= ~(1<<5);	// 设置低电平，LED1点亮   0b 1110 1111 第5个位置为0，点亮
+      	GPBDAT &= ~(1<<5);	// 设置低电平，LED1点亮   0b 1110 1111 第5个位置为0，点亮
         				   // GPBDAT |= (1<<5);	LED1熄灭	0b 0001 0000 第5个位置为1，熄灭
         ```
-     ```
       
-   - 以总线方式访问硬件
+      - 以总线方式访问硬件
       
-     通过总线方式访问硬件更常见。
+        通过总线方式访问硬件更常见。
       
-     以NOR Flash的访问为例。
-      
-     ![1566383756096](/1566383756096.png)
-      
-     图中缓冲器的作用为提高驱动能力、隔离前后级信号。
-      
-        NOR Flash AM29LV800BB的片选信号使用S3C2410/S3C2440的nGCS0信号。当CPU发出的地址信号处于0x00000000~0xFFFFFFFF之间时，nGCS0信号有效（低电平），于是NOR Flash被选中。
+        以NOR Flash的访问为例。
    
-        这时
+   ![1566383756096](/1566383756096.png)
    
-        - CPU发出的地址信号传到NOR Flash
+   ​				图中缓冲器的作用为提高驱动能力、隔离前后级信号。
    
-        - 进行写操作时，nWE信号为低，数据信号从CPU发给NOR Flash
-        - 进行读操作时，nWE信号为高，数据信号从NOR Flash发给CPU。
+   ​				NOR Flash AM29LV800BB的片选信号使用S3C2410/S3C2440的nGCS0信号。当CPU发出的地址信号处于				0x00000000~0xFFFFFFFF之间时，nGCS0信号有效（低电平），于是NOR Flash被选中。
+   
+   这时		
+   
+      - CPU发出的地址信号传到NOR Flash
+   
+      - 进行写操作时，nWE信号为低，数据信号从CPU发给NOR Flash
+      - 进行读操作时，nWE信号为高，数据信号从NOR Flash发给CPU。
+   
+      本图所示的硬件连线决定了读写操作都是以16位为单位(DATA0~DATA15,D0~D15)
+   
+      发起读写操作的方法，举例：
+   
+   ```c
+   例5.1 地址对齐的16位读操作
+   unsigned short * pwAddr = (unsigned short *)0x2;
+   unsigned short wVal;
+   wVal = *pwAddr;
       
-        本图所示的硬件连线决定了读写操作都是以16位为单位？？？？
+      此代码会向NOR Flash发起读操作：
+      CPU发出的读地址为0x2，则地址总线ADDR1~ADDR20、A0~A19的信号都是1、0、...、0（CPU的ADDR0为0，不过ADDR0没有接到NOR Flash上）。
+      NOR Flash接收到的地址就是0x1，NOR Flash在稍后的时间里将此地址上的16位数据取出，并通过数据总线D0~D15发给CPU。
+   ```
+   
+	```c
+   例5.2 地址不对齐的16位读操作
+   unsigned short * pwAddr = (unsigned short *)0x1;
+   unsigned short wVal;
+   wVal = *pwAddr;
       
-        发起读写操作的方法，举例：
+      由于地址为0x1，不是2对齐的，但是BANK0的位宽被设为16，这将导致异常。可以设置异常处理函数来处理这种情况。
+   在异常处理函数中，使用0x0、0x2发起两次读操作，然后将两个结果组合起来：
+      	- 使用地址0x0的两字节数据D0、D1；
+      	- 使用地址0x2读到D2、D3；
+      	- 最后，D1、D2组合成一个16位的数返回给wVal
+      如果没有设置地址不对齐的异常处理函数，那么上述代码将出错。
+      如果某个BANK的位宽被设为n，访问此BANK时，在总线上永远只会看到地址对齐的n位操作。
+	```
+
+	```c
+   例5.3 8位读操作
+   unsigned char * pucAddr = (unsigned char *)0x6;
+   unsigned char ucVal;
+   ucVal = *pucAddr;
       
-        ```c
-        例5.1 地址对齐的16位读操作
-        unsigned short * pwAddr = (unsigned short *)0x2;
-     unsigned short wVal;
-        wVal = *pwAddr;
-        
-        此代码会向NOR Flash发起读操作：
-        CPU发出的读地址为0x2，则地址总线ADDR1~ADDR20、A0~A19的信号都是1、0、...、0（CPU的ADDR0为0，不过ADDR0没有接到NOR Flash上）。
-        NOR Flash接收到的地址就是0x1，NOR Flash在稍后的时间里将此地址上的16位数据取出，并通过数据总线D0~D15发给CPU。
-     ```
+      CPU首先使用地址0x6对NOR Flash发起16位的读操作，得到两字节的数据，假设为D0、D1；
+      然后将D0取出赋值给变量ucVal。
+      在读操作期间，地址总线ADDR1~ADDR20、A0~A19的信号都是1、1、...、0(CPU的ADDR0为0，不过ADDR0没有接到NOR Flash上).
+      CPU会自动丢弃D1。
+	```
 
-        ```c
-        例5.2 地址不对齐的16位读操作
-        unsigned short * pwAddr = (unsigned short *)0x1;
-        unsigned short wVal;
-        wVal = *pwAddr;
-        
-        由于地址为0x1，不是2对齐的，但是BANK0的位宽被设为16，这将导致异常。可以设置异常处理函数来处理这种情况。
-     在异常处理函数中，使用0x0、0x2发起两次读操作，然后将两个结果组合起来：
-        	- 使用地址0x0的两字节数据D0、D1；
-        	- 使用地址0x2读到D2、D3；
-        	- 最后，D1、D2组合成一个16位的数返回给wVal
-        如果没有设置地址不对齐的异常处理函数，那么上述代码将出错。
-        如果某个BANK的位宽被设为n，访问此BANK时，在总线上永远只会看到地址对齐的n位操作。
-        ```
+   ```c
+   例5.4 32位读操作
+   unsigned int * pdwAddr = (unsigned int *)0x6;
+   unsigned int dwVal;
+   dwVal = *pucAddr;
+      
+      CPU首先使用地址0x6对NOR Flash发起16位的读操作，得到两字节的数据，假设为D0、D1；
+      再使用地址0x8发起读操作，得到两字节的数据，假设D2、D3;
+      最后将这4个数据组合后赋给变量dwVal
+   ```
 
-        ```c
-        例5.3 8位读操作
-        unsigned char * pucAddr = (unsigned char *)0x6;
-        unsigned char ucVal;
-     ucVal = *pucAddr;
-        
-        CPU首先使用地址0x6对NOR Flash发起16位的读操作，得到两字节的数据，假设为D0、D1；
-        然后将D0取出赋值给变量ucVal。
-        在读操作期间，地址总线ADDR1~ADDR20、A0~A19的信号都是1、1、...、0(CPU的ADDR0为0，不过ADDR0没有接到NOR Flash上).
-        CPU会自动丢弃D1。
-        ```
-          
-        ```c
-        例5.4 32位读操作
-        unsigned int * pdwAddr = (unsigned int *)0x6;
-     unsigned int dwVal;
-        dwVal = *pucAddr;
-        
-        CPU首先使用地址0x6对NOR Flash发起16位的读操作，得到两字节的数据，假设为D0、D1；
-        再使用地址0x8发起读操作，得到两字节的数据，假设D2、D3;
-        最后将这4个数据组合后赋给变量dwVal
-        ```
-          
-        ```c
-        例5.5 16位写操作
-        unsigned short * pwAddr = (unsigned short *)0x6;
-     *pwAddr = 0x1234;
-        
-     CPU发起一次多NOR Flash的写操作，地址总线ADDR1~ADDR20、A0~A19的信号都是1、1、...、0(CPU的ADDR0为0，不过ADDR0没有接到NOR Flash上);
-        数据总线DATA0~DATA15、D0~D15的信号为(0、0、1、0)、1、1、0、0、0、1、0、0、(1、0、0、0)。
-     									4           3           2           1
-            								-------------------------------------->
-        ```
+   ```c
+   例5.5 16位写操作
+   unsigned short * pwAddr = (unsigned short *)0x6;	// 0b 0110
+   *pwAddr = 0x1234;
+      
+   CPU发起一次多NOR Flash的写操作，地址总线ADDR1~ADDR20、A0~A19的信号都是1、1、...、0(CPU的ADDR0为0，不过ADDR0没有接到NOR Flash上);
+      数据总线DATA0~DATA15、D0~D15的信号为(0、0、1、0)、1、1、0、0、0、1、0、0、(1、0、0、0)。
+   									4           3           2           1
+          								-------------------------------------->
+   ```
 
-        由此可见，CPU使用某个地址进行访问时，这个32位的地址值和ADDR0~ADDR31一一对应(也许CPU没有引出那么多地址信号，比如S3C2410/S3C2440只引出了ADDR0~ADDR26共27根地址线)。
-          
-        外接的设备可以以8位、16位、32位进行操作——这取决于硬件设计：
-          
-        - 如果以8位进行操作，则数值出现在数据信号DATA0~DATA7上；
-        - 如果以16位进行操作，则数值出现在数据信号DATA0~DATA15上；
-        - 如果以32位进行操作，则数值出现在数据信号DATA0~DATA31上
-
+   由此可见，CPU使用某个地址进行访问时，这个32位的地址值和ADDR0~ADDR31一一对应(也许CPU没有引出那么多地址信号，比如S3C2410/S3C2440只引出了ADDR0~ADDR26共27根地址线)。     
+   外接的设备可以以8位、16位、32位进行操作——这取决于硬件设计：     
+   
+   - 如果以8位进行操作，则数值出现在数据信号DATA0~DATA7上；
+      - 如果以16位进行操作，则数值出现在数据信号DATA0~DATA15上；
+      - 如果以32位进行操作，则数值出现在数据信号DATA0~DATA31上
+   
 2. GPIO操作实例：LED和按键
 
    本节，涉及在开发版上运行程序。
@@ -1577,27 +1578,27 @@ $ sudo chown book:book /work -R
       ![1566283931762](/1566283931762.png) 
       
    2. 程序设计及代码详解
-   
+
       本节有3个实例，通过读写GPIO寄存器来驱动LED、获得按键状态。先使用汇编程序编写一个简单的点亮LED的程序，然后使用C语言实现更复杂的功能。
-   
+
       - 实例1：使用汇编代码点亮一个LED
-   
+
         源程序/work/hardware/led_on/led_on.S。它有7条指令，只是简单的点亮发光二极管LED1.
-   
+
         操作步骤：
-   
+
         - 把PC并口和开发板JTAG接口连起来，确保插上NAND_BOOT跳线、上电。
-   
+
         - 进入led_on目录后，执行如下命令生成可执行文件led_on.bin
-   
+
           ```shell
           $ make
           ```
-   
+
         - 执行如下命令将led_on.bin写入NAND Flash
-   
+
           sjf2410.exe、sjf2440.exe是Windows烧写开发板的JTAG工具，嵌入式Linux下的工具名为Jflash-s3c2410、Jflash-s3c2440，它们用法相似。工具位于/work/tools/jtag目录下，在Windows上使用前要先安装驱动，在/work/tools/jtag/for_windows/jtag_driver目录下。
-   
+
           ```shell
           $ sjf2410.exe /f:led_on.bin /d=5
           或
@@ -1605,33 +1606,33 @@ $ sudo chown book:book /work -R
           
           (Linux下，Jflash-s3c2410、Jflash-s3c2440不支持对NOR Flash操作，前面要加上sudo)
           ```
-   
+
           - 当出现如下提示，输入0选择NAND Flash K9F1208
-   
+
             ![1566527147184](/1566527147184.png)
-   
+
           - 当出现如下提示，输入0表示烧写NAND Flash K9F1208
-   
+
             ![1566527387410](/1566527387410.png)
-   
+
           - 当出现如下提示，输入0表示从第0块开始烧写
-   
+
             ![1566527519476](/1566527519476.png)
-   
+
           - 当再次出现第2个提示，输入2，并退出
-   
+
             ![1566527387410](/1566527387410.png)
-   
+
         - 按开发版上的复位键后可看见LED1被点亮了
-   
+
         实例分为4个步骤：编写源程序、生成可执行程序、烧写程序、运行程序。
-   
+
         
-   
+
         **源程序led_on.S**:
-   
+
         (S3C2410和S3C2440的GPBCON、GPBDAT寄存器地址是0x56000010和0x56000014，可以通过如下指令让GPB5输出低电平，点亮LED1：)
-   
+
         ```assembly
         .text
         .global	_start
@@ -1639,7 +1640,7 @@ $ sudo chown book:book /work -R
         		LDR		R0,=0x56000010			@ R0设为GPBCON寄存器。此寄存器		04
         									   @ 用于选择端口B各引脚的功能			 05
         									   @ 是输出、输入、还是其它
-        		MOV		R1,#0x00000400			@ 0x0400 = 0100 0000 0000		  07
+        		MOV		R1,#0x00000400			@ 0x0400 = 0100 0000 0000		  	07
         		STR		R1,[R0]				   @ 设置GPB5为输出口，位[11:10]=0b01	  08
         		LDR		R0,=0x56000014			@ R0设为GPBDAT寄存器。此寄存器		09
         									   @ 用于读写端口B各引脚的数据
@@ -1649,9 +1650,9 @@ $ sudo chown book:book /work -R
         MAIN_LOOP:																 @14
         		B		MAIN_LOOP												 @15
         ```
-   
+
         对应c语言代码：
-   
+
         ```c
         #define GPBCON		(*(volatile unsigned long *)0x56000010)
         #define GPBDAT		(*(volatile unsigned long *)0x56000014)
@@ -1660,13 +1661,13 @@ $ sudo chown book:book /work -R
         GPBDAT &= ~(1<<5);	// 设置低电平，LED1点亮   0b 1110 1111 第5个位置为0，点亮
         				   // GPBDAT |= (1<<5);	LED1熄灭	0b 0001 0000 第5个位置为1，熄灭
         ```
-   ```
+      
         
-   汇编程序，第4、7、8行用于将LED1对应的引脚GPB5设置成输出引脚；第9、11、13让这个引脚输出0；第15行指令是个死循环。
-        
-   **指令make调用的Makefile**：
-        
-   ​```makefile
+      
+      汇编程序，第4、7、8行用于将LED1对应的引脚GPB5设置成输出引脚；第9、11、13让这个引脚输出0；第15行指令是个死循环。
+      **指令make调用的Makefile**：     
+   
+   ```makefile
         led_on.bin:led_on.S
         	arm-linux-gcc -g -c -o led_on.o led_on.S					编译
         	arm-linux-ld -Ttext 0x00000000 -g led_on.o -o led_on_elf	 连接
@@ -1674,9 +1675,9 @@ $ sudo chown book:book /work -R
         clean:
         	rm -f led_on.bin led_on_elf *.o
    ```
-   
-   make指令比较第一行中文件led_on.bin和文件led_on.S的时间，如果.S的较新，则编译。
-        
+
+   ​	make指令比较第一行中文件led_on.bin和文件led_on.S的时间，如果.S的较新，则编译。
+   ​     
    - 实例2：使用C语言代码点亮一个LED
      
      源程序位于/work/hardware/led_on_c目录下。
@@ -1721,13 +1722,13 @@ $ sudo chown book:book /work -R
      Makefile:
      
      ```makefile
-        led_on.bin : crt0.S led_on_c.c
-        	arm-linux-gcc -g -c -o crt0.o crt0.S									编译
+     led_on.bin : crt0.S led_on_c.c
+     	arm-linux-gcc -g -c -o crt0.o crt0.S									编译
         	arm-linux-gcc -g -c -o led_on_c.o led_on_c.c							 编译
         	arm-linux-ld -Ttext 0x00000000 -g crt0.o led_on_c.o -o led_on_c_elf	 	   连接
         	arm-linux-objcopy -O binary -S led_on_c_elf led_on_c.bin 			转为二进制bin
         	arm_linux-objdump -D -m arm led_on_c_elf > led_on_c.dis				转为汇编码
-        clean:
+     clean:
         	rm -f led_on_c.dis led_on_c.bin led_on_c_elf *.o
      ```
      
@@ -1768,13 +1769,13 @@ $ sudo chown book:book /work -R
      ```c
         #define GPBCON	(*(volatile unsigned long *)0x56000010)
         #define GPBDAT	(*(volatile unsigned long *)0x56000014)
-        
+     
         #define GPFCON	(*(volatile unsigned long *)0x56000050)
         #define GPFDAT	(*(volatile unsigned long *)0x56000054)
-        
+     
         #define GPGCON	(*(volatile unsigned long *)0x56000060)
         #define GPGDAT	(*(volatile unsigned long *)0x56000064)
-        
+     
         /*
          * LED1-4对应GPB5、GPB6、GPB7、GPB8
          * 输出为0b01
@@ -1784,15 +1785,15 @@ $ sudo chown book:book /work -R
         #define GPB6_out	(1<<(6*2))		// [13:12] 0000 0000 0000 0000 0001 0000 0000 0000
         #define GPB7_out	(1<<(7*2))		// [15:14] 0000 0000 0000 0000 0100 0000 0000 0000
         #define GPB8_out	(1<<(8*2))		// [17:16] 0000 0000 0000 0001 0000 0000 0000 0000
-        
+     
         /*
          * K1-K4对应GPG11、GPG3、GPF2、GPF0	
          */
-        #define GPG11_in	~(3<<(11*2))	// [23:22] 1111 1111 0011 1111 1111 1111 1111 1111
+        #define GPG11_in		~(3<<(11*2))	// [23:22] 1111 1111 0011 1111 1111 1111 1111 1111
         #define GPG3_in		~(3<<(3*2))		// [7:6] ... 1111 1111 0011 1111
         #define GPF2_in		~(3<<(2*2))		// [5:4] ... 1111 1111 1100 1111
         #define GPF0_in		~(3<<(0*2))		// [1:0] ... 1111 1111 1111 1100
-        
+     
         int main()
         {
             unsigned long dwDat;
@@ -1806,7 +1807,7 @@ $ sudo chown book:book /work -R
             							  //           11                  03 
             
             // K3~K4对应的2根引脚设为输入
-            GPFCON = GPF2_in & GPF0_in;		// 1111 1111 1111 1111 1111 1111 1100 1100
+            GPFCON = GPF2_in & GPF0_in;	// 1111 1111 1111 1111 1111 1111 1100 1100
             							  //                                 02   00 
             
             while(1){
@@ -1854,11 +1855,11 @@ $ sudo chown book:book /work -R
    
    1. S3C2410/S3C2440的地址空间
    
-      - 每个BANK空间为128M，总共1GB（8BANKs)。物理地址从0x000000~0x40000000
+      - 每个BANK空间为128M，总共1GB（8BANKs)。物理地址从0x00000000~0x40000000
       - BANK0~BANK5可以支持外接ROM、SRAM等，BANK6~BANK7还可额外支持SDRAM等
       - BANK6、BANK7的地址空间大小可编程控制
    
-      S3C2410/S3C2440对外引出27根地址线ADDR0~ADDR26访问128MB空间。CPU对外还引出8根片选信号nGCS0~nGCS7，对应于BANK0~BANK7，nGCSx引脚输出低电平，表示访问BANKx地址空间。
+      S3C2410/S3C2440对外引出27根地址线ADDR0~ADDR26访问128MB空间。CPU对外还引出8根**片选信号nGCS0~nGCS7**，对应于**BANK0~BANK7**，nGCSx引脚输出低电平，表示访问BANKx地址空间。
    
       > 通过设置OM1、OM0引脚，可以选择从NAND Flash启动还是从NOR Flash启动
    
@@ -1878,11 +1879,28 @@ $ sudo chown book:book /work -R
    
       存储控制器的各BANK，可以分别外接各种设备：NOR Flash、IDE接口、10M网卡CS8900、100M网卡DM9000、扩展串口芯片16C2550、SDRAM等。
    
-      外设访问地址确定：各BANK起始地址+地址线
-   
+      **外设访问地址确定**：
+      $$
+      各BANK起始地址+地址线
+      $$
       举例：
    
       - BANK5连接扩展串口芯片16C2550，扩展串口A、B的外设的访问地址
+   
+        - nGCS5，起始地址为0x28000000
+        - nCSA=ADDR24||nGCS5，nCSB=！ADDR24||nGCS5。ADDR24和nGCS5均为低电平时选中串口A；当ADDR24为高电平、nGCS5为低电平时选扩展串口B。
+        - CPU的ADDR0~ADDR2连接到扩展串口的A0~A2，
+        - 访问空间为8字节
+   
+        所以
+   
+        ```
+        扩展串口A访问空间为：0x28000000~0x28000007
+        扩展串口B访问空间为：0x29000000~0x29000007
+        ```
+   
+        ![1568119639473](/1568119639473.png)
+   
       - BANK6连接两片K4S561632C的SDRAM外设，访问地址
    
       举例所有外设访问地址：
@@ -1891,13 +1909,13 @@ $ sudo chown book:book /work -R
    
    3. 存储控制器的寄存器使用方法
    
-      存储控制器共13个寄存器。
+      存储控制器**共13个寄存器**。
    
       BANK0~BANK5只需要设置 **BWSCON** 和 **BACKCONx** (x为0~5)两个寄存器；
    
       BANK6、BANK7外接SDRAM时，除 BWSCON 和 BACKCONx 外，还要设置 **REFRESH**、**BANKSIZE**、**MRSRB6**、**MRSRB7** 四个寄存器。
    
-      - 位宽和等待控制寄存器 BWSCON (BUS WIDTH & WAIT CONTROL REGISTER)
+      - 位宽和等待控制寄存器 **BWSCON (BUS WIDTH & WAIT CONTROL REGISTER)** 
    
         每四位控制一个BANK，从BANK7 ... BANK0
    
@@ -1915,11 +1933,11 @@ $ sudo chown book:book /work -R
    
         ​					0x22011110
    
-      - BANK控制寄存器BANKCONx(BANK CONTROL REGISTER, x为0~5)
+      - BANK控制寄存器**BANKCONx(BANK CONTROL REGISTER**, x为0~5)
    
         控制BANK0~BANK5外接设备的访问时序，使用默认的0x0700
    
-      - BANK控制寄存器BANKCONx（BANK CONTROL REGISTER, x为6~7)
+      - BANK控制寄存器**BANKCONx（BANK CONTROL REGISTER**, x为6~7)
    
         由于BANK6和BANK7可以外接SDRAM，所有与前6个不同
    
@@ -1957,11 +1975,11 @@ $ sudo chown book:book /work -R
    
         => 在未使用PLL时，REFRESH=0x008C0000+1955 = 0x008C07A3
    
-      - BANKSIZE寄存器REFRESH
+      - **BANKSIZE寄存器REFRESH**
    
         本开发版为0xB1
    
-      - SDRAM模式设置寄存器MRSRBx(SDRAM MODE REGISTER SET REGISTER，x为6，7)
+      - SDRAM模式设置寄存器**MRSRBx(SDRAM MODE REGISTER SET REGISTER**，x为6，7)
    
         修改位为CL([6:4])，这是SDRAM时序的一个时间参数：
    
@@ -1969,13 +1987,11 @@ $ sudo chown book:book /work -R
    
         本开发版取0b11，所以MRSRB6/7的值为 0x30
    
-      
-   
 2. 存储控制器操作实例：使用SDRAM
 
    1. 代码详解及程序的复制、跳转过程
 
-      从NAND Flash启动CPU时，CPU会通过内部的硬件将NAND Flash开始的4KB数据复制到称为"Steppingstone"的4KB的内部RAM中(起始地址为0)，然后跳到地址0开始执行。
+      从NAND Flash启动CPU时，CPU会通过内部的硬件将NAND Flash开始的4KB数据复制到称为"**Steppingstone**"的4KB的内部RAM中(起始地址为0)，然后跳到地址0开始执行。
 
       **本例实现思路**：
 
@@ -1995,7 +2011,7 @@ $ sudo chown book:book /work -R
       .equ		SDRAM_BASE,		0x30000000  @ 外设SDRAM 起始地址
       
       .text
-      global _start
+      .global _start
       _start:
       	b1	disable_watch_dog
       	b1	memsetup
@@ -2029,8 +2045,7 @@ $ sudo chown book:book /work -R
       	mov	pc,	lr
       	
       memsetup:
-      	@ 设置存储控制器以便使用SDRAM等外设
-      	
+      	@ 设置存储控制器以便使用SDRAM等外设	
       	mov	r1,	#MEM_CTL_BASE
       	adr1	r2,	mem_cfg_val			@47 13个寄存器值的起始存储地址
       	add	r3,	r1, #52
@@ -2303,7 +2318,7 @@ $ sudo chown book:book /work -R
         15  	bl	mmu_init
         16  	ldr	sp, =0xB4000000
         17  	ldr	pc, =0xB0004000
-     18  halt_loop:
+       18  halt_loop:
         19  	b	halt_loop
         20  
         ```

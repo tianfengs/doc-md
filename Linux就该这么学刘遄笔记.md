@@ -4509,6 +4509,46 @@ firewall-config的界面和功能具体如下。
 
 ![firewall-config界面](pics\firewall-config界面.png)
 
+###### 8.3.4 TCP Wrappers 
+
+基于应用层的设置，只能使用服务名称进行设置
+
+防火墙设置四种方法
+
+```
+1. iptables
+2. firewall-cmd
+3. firewall-config
+4. TCP Wrappers
+```
+
+TCP Wrappers由两个文件组成
+
+```
+/etc/hosts.allow	白名单
+					允许的服务名称、IP地址段
+					先匹配，优先级高于黑名单
+/etc/hosts.deny		黑名单
+					拒绝的服务名称、IP地址段
+					后匹配
+```
+
+hosts.deny举例，加入拒绝ssh服务
+
+```
+sshd:192.168.10.
+或者
+sshd:192.168.10.0/255.255.255.0
+```
+
+hosts.allow举例
+
+```
+sshd:
+```
+
+
+
 ##### 8.4 服务的访问控制列表
 
 TCP Wrappers是RHEL 7系统中默认启用的一款流量监控程序，它能够根据来访主机的地址与本机的目标服务程序作出允许或拒绝的操作。换句话说，Linux系统中其实有两个层面的防火墙，第一种是前面讲到的基于TCP/IP协议的流量过滤工具，而TCP Wrappers服务则是能允许或禁止Linux系统提供服务的防火墙，从而在更高层面保护了Linux系统的安全运行。
@@ -4758,5 +4798,9 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0
 
 
 
-
+> Linux系统中的一切都是文件
+>
+> 部署服务就是在修改服务的配置文件
+>
+> 要运行最新的参数，需要重启对应的服务，顺手将配置的服务加入到启动项中，保证重启后依然有效
 
