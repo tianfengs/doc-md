@@ -948,7 +948,7 @@ WCF应用程序通过序列化(通常是XML方式)技术来传递数据，对于
 
 要让自定义类型成为**数据协定**，应该将`DataContractAttribute`应哟个于类型，把`DataMemberAttribute`应用到类型成员上（字段或属性）
 
-示例：
+**示例**：
 
 - 新建一个控制台程序项目
 
@@ -1073,9 +1073,9 @@ public class Product
 
 各元素是按首字母来排序的。
 
-如果想设置规定排序的化，可以设置Order属性
+如果想设置规定排序的化，可以设置**Order属性**
 
-```
+```c#
 [DataContract]
 public class Product
 {
@@ -1087,4 +1087,117 @@ public class Product
 	public float Size{get;set;}
 }
 ```
+
+设置Order值后序列化生成的XML文档如下：
+
+```
+<Product>	
+	<ID>0a0c2f5c-150b-4511-b439-96736bf190b0</ID>
+	<Size>5.33</Size>
+	<DescName>产品A</DescName>
+</Product>
+```
+
+#### 2.3 必需成员`IsRequired`与可忽略成员`IgnoreDataMember` 
+
+**必需成员**要求反序列化过程中必须找到指定的成员。一般情况下,如果XML数据中缺少某个成员的值,反序列化程序会为对象实例中的对应成员保留默认值(如果成员类型是int,默认为0;如果是string,则默认为null)。若是某个成员被标记为必需成员,反序列化的时候,如果找不到指定的成员的值,就会引发异常。
+
+```
+[DataContract(Name="product",Namespace="sample-data")]
+class Product
+{
+	[DataMember(Name="id")]
+	public int PID{get;set;}
+	[DataMember(Name="name")]
+	public string Name{get;set;}
+	[DataMember(Name="color", IsRequired=true)]
+	public int Color{get;set;}
+}
+```
+
+下面是客户端定义的数据协定：
+
+```
+[DataContract(Name="product",Namespace="sample-data")]
+class ProductInfo
+{
+	[DataMember(Name="id")]
+	public int ID{get;set;}
+	[DataMember(Name="name")]
+	public string ProdName{get;set;}
+}
+```
+
+把客户端上的product协定实例序列化：
+
+```
+Client.ProductInfo p1=new Client.ProductInfo
+{
+	ID=1000069,
+	ProdName="测试产品"
+};
+DataContractSerializer sz = new DataContractSerializer(typeof(Client.ProductInfo));
+sz.WriteObject(stream, p1);
+
+```
+
+生成XML如下：
+
+```
+<product>	
+	<id>1000069</id>
+	<name>产品A</name>
+</product>
+```
+
+反序列化，反序列化的类型将使用服务器上定义的product协定：
+
+```
+DataContractSerializer dsz = new DataContractSerializer(typeof(Server.Product));
+Server.Product p2 = (Server.Product)dsz.ReadObject(stream);
+```
+
+此时发生异常：
+
+![1570550742602](/1570550742602.png) 
+
+下面情形——在序列化过程中，**可**以**忽略**某些**成员** 。在数据协定的成员上应用`IgnoreDataMember` ，它们不参与序列化
+
+```
+[DataContract(Namespace="http://demo",Name="car")]
+public class Car
+{
+	[DataMember(Name="speed")]
+	public double Speed;
+	[DataMember(Name="color")]
+	public int Color;
+	[IgnoreDataMember]
+	public string Remarks;	
+}
+```
+
+进行序列化：
+
+```
+Car car = new Car();
+car.Speed=96.3d;
+car.Color=3224;
+car.Remark = "示例文本";
+
+DataContractSerializer sz= new DataContractSerializer(typeof(Car));
+sz.WriteObject(stream, car);
+```
+
+序列化后生成的XML文档：
+
+```
+<car>
+	<color>3224</color>
+	<speed>96.3</speed>
+</car>
+```
+
+#### 2.4 将枚举类型声明为数据协定
+
+
 
