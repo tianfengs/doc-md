@@ -3,7 +3,7 @@ typora-root-url: pics
 typora-copy-images-to: pics
 ---
 
-> msdn上的官方文档
+# msdn上的官方文档
 >
 > 参考： https://docs.microsoft.com/zh-cn/dotnet/framework/wcf/guide-to-documentation
 
@@ -73,4 +73,1018 @@ WCF（Windows Communication Foundation）是一个框架，用于构建面向服
   最常用的协议和编码时发送文本编码的soap消息，使用在万维网上使用超文本传输协议（HTTP）。或者，WCF允许您将消息发送通过TCP、命名管道或MSMQ。这些消息可以编码为文本，也可以使用优化的二进制格式。
 
   使用MTOM标准可有效的发送二进制数据。
+
+
+
+
+
+
+
+# WCF编程权威指南
+
+## 一、WCF应用程序基础
+
+- 编写WCF应用项目的基本思路
+- ServiceHost类的用法
+- 客户端通过服务引用个来调用WCF服务
+- 使用ChannelFactory类来调用WCF服务
+
+### 1. WCF服务的基本实现步骤
+
+   WCF服务端的实现步骤：
+
+   - 定义协定：
+
+     主要是**服务协定 ServiceContract**。服务协定是一个接口，接口本身作为服务协定的容器。
+
+     在服务协定内，可以包含1到多个**服务操作协定 OperationContract(操作协定)**，映射到接口类型上，操作协定是一个方法。服务操作必须是方法，不能是属性和事件等成员。
+
+     还有**数据协定 DataContract** 和**消息协定 MessageContract**。
+
+   - 实现服务类：
+
+     服务协定只是一个接口，它可以在服务器和客户端之间共享，作为双方用来通信的一种“**约定**”。
+
+     服务协定只是一个接口，并不包含实际的代码实现，因此，需要一个类来实现协定接口，提供具体的功能，这就是**服务类**。
+
+     客户端会通过访问服务协定接口的某个方法来调用WCF服务，当消息发送到服务器后，服务器会找到实现协定接口的类，并将其实例化，然后调用与操作协定匹配的方法（即**服务协定接口的实现方法**）。
+
+   - **寄宿WCF服务**：
+
+     对于Web项目，可以不考虑这一步，因为项目模板会生成相关的代码，使WCF服务能够在IIS服务上运行。
+
+     对于独立进程中的WCF服务，必须使用ServiceHost类来启动服务，之后客户端才能调用服务。
+
+   **完成一个简单的WCF服务应用程序**:
+
+   - 以管理员身份运行Visual Studio，然后新建一个控制台应用程序。
+
+     由于在进程中寄宿WCF服务时，某些情况下要求运行用户具有管理员权限。以管理员身份运行开发环境，这样在调试的时候，管理员权限会传递到示例进程中，以避免因权限不够而运行失败。
+
+   - 与WCF相关的许多类型都位于程序集**System.ServiceModel**中，因此需要在项目中添加对该程序集的引用。
+
+   - **定义服务协定接口**，本示例中接口的名字为IDemo，代码如下：
+
+     ```c#
+     [ServiceContract]
+     public interface IDemo
+     {
+     	[OperationContract]
+     	int Add(int a, int b);
+     	
+     	void Run();
+     }
+     ```
+
+     服务协定的定义与一般的接口类型无异，Add方法会被视为**操作协定公开**，Run方法不会被作为操作协定公开。
+
+   - 定义一个类，**实现服务协定接口**：
+
+     ```
+     internal class DemoService : IDemo
+     {
+     	public int Add(int a, int b)
+     	{
+     		return a+b;
+     	}
+     	
+     	public void Run()
+     	{
+     		// 不会公开
+     	}
+     }
+     ```
+
+     服务器与客户端是通过协定来交互的，它只在服务器内部使用，因此该类不应该声明为public，可以定义为**internal**。
+
+   - 创建ServiceHost实例，寄宿WCF服务
+
+     ```c#
+     // 基址
+     Uri baseAddress = new Uri("httpl://localhost:500");
+     
+     using(ServiceHost host = new ServiceHost(typeof(DemoService), baseAddress))
+     {
+     	// 添加终结点
+     	BasicHttpBinding binding = new BasicHttpBinding();
+     	host.AddServiceEndpoint(typeof(IDemo), binding, "demo");
+     	
+     	// 打开服务
+     	host.Open();
+     	Console.WriteLine("WCF服务已启动。")
+     	
+     	Console.Read();
+     	host.Close();	// 关闭服务
+     }
+     ```
+
+     在实例化ServiceHost类时，需要传递一个表示服务实现类的Type作为参数，本例中为DemoService类，因为要进行实例化。另外，还有一个可选参数——baseAddresses，它是一个URI数组，可以包含多个URI，它表示服务公开的基础地址。
+
+     调用ServiceHost类的构造函数后，可以对服务进行一些设置，比如**添加服务终结点（EndPoint）**。
+
+     服务终结点用于向客户端公开WCF服务，它需要指定一个有效的地址，**本例中指定了一个相对地址demo**，结合传递给ServiceHost类构造函数的基址，该服务终结点的地址变为：
+
+     ```
+     http://localhost:500/demo
+     ```
+
+     如果在调用ServiceHost构造函数时没有指定任何基址，那么在添加终结点时就必须使用完整的URI：
+
+     ```c#
+     host.AddServiceEndpoint(typeof(IDemo), binding, "http://localhost:500/demo");
+     ```
+
+     服务终结点包含：一到多个地址(URI)、一个绑定（Binding）、一个协定（Contract）
+
+     协定就是前面定义的服务协定。
+
+     绑定负责通信层控制的，比如采用HTTP协议还是TCP协议通信、传输数据的缓冲区有多大等。
+
+     将**地址、绑定和协定**三者结合起来，组成了**终结点**的基本功能，即WCF服务将在地址 http://localhost:500 上公开 IDemo服务协定，并以HTTP方式通信，这样一来，客户端就能通过这个地址来找到服务并进行调用了。
+
+     设置完ServiceHost各个参数后，就可以调用Open方法打开服务，只有在服务出游打开状态下，客户端才能访问。在调用Open方法之前必须完成所有的服务配置，如向服务添加一个终结点，或者可以配置服务器证书等，服务一旦打开，就不能进行配置了。
+     
+     配置WCF服务：**使用代码**，**使用配置文件**。
+
+### 2. 调用WCF服务
+
+   客户端可以通过两种方法来调用WCF服务
+
+   - 服务引用
+
+     在Visual Studio开发环境中，只需要**添加服务引用**，开发工具就会自动生成客户端代理类。
+
+     要让WCF服务支持在客户端以添加服务引用的方式生成代理类型，WCF服务必须**向客户端公开元数据（Metadata）**。元数据将以WSDL文档的形式公开，它的作用是描述服务的一些基本信息，如在哪个地址可以找到服务，服务包含哪些操作可以被调用，调用服务时所使用的输入输出消息的结构。
+
+     Visual Studio开发环境是根据WCF服务所公开的元数据来生成客户端代理类。
+
+     下面示例将演示一个简单的数学计算服务：
+
+     - 首先定义服务协定
+
+       ```
+       [ServiceContract]
+       public interface IService
+       {
+       	[OperationContract]
+       	double Sqr(double i);
+       }
+       ```
+
+     - 接着是实现服务协定接口，实现接口的类只在服务器上执行，不需要对外公开
+     
+       ```
+       class MyService:IService
+       {
+       	public double Sqr(double i)
+       	{
+       		return i*i;
+       	}
+       }
+       ```
+     
+     - 接着实例化一个ServiceHost对象，用以运行WCF服务
+     
+       ```c#
+       // 服务基址
+       Uri baseUri = new Uri("http://localhost:500");
+       
+       using (ServiceHost host = new ServiceHost(typeof(MyService), baseUri))
+       {
+       	// 公开服务的元数据
+       	ServiceMetadataBehavior metadata = null;
+       	host.Description.Behaviors.Find<ServiceMetadataBehavior>();
+       	if(metadata == null)
+       	{
+       		metadata = new ServiceMetadataBehavior();
+       	}
+       	metadata.HttpGetEnabled = true;		// 必需
+       	host.Description.Behaviors.Add(metadata);
+       	
+       	// 打开服务
+       	host.Open();
+       	Console.WriteLine("服务已运行")；
+       	
+       	Console.Read();
+       }
+       ```
+     
+       本示例，实例化ServiceHost对象后，并没有调用AddServiceEndpoint方法来添加服务终结点，只是在ServiceHost类的构造函数调用时，传递了服务类的Type及服务基址。这是因为ServiceHost具有一个默认终结点处理方案，如果没有显式调用AddServiceEndPoint()，那么ServiceHost会根据基址和服务类自动生成服务终结点。
+       
+       本例基址是：http://localhost:500 ，则通信协议是 HTTP，使用的绑定是 BasicHttpBinding；如果使用 net.tcp 协议，就会使用NetTcpBinding
+       
+       MyService服务类只实现了一个服务协定——IService，所以默认的服务终结点的服务协定将指向IService
+       
+       由于是默认生成的服务终结点，因此其地址与基址相同。
+       
+       另外，最为关键的一点是：一定要将一个ServiceMetadataBehavior实例添加到服务的Behavior集合中。
+       
+       **行为（Behavior）**用来描述服务将支持哪些扩展功能，比如是否支持获取元数据、是否把服务器上的错误信息传回给客户端/服务类实例在何时被清理等。
+       
+       本例中则需要**ServiceMetadataBehavior类**来使服务支持**向客户端公开元数据**。
+     
+   - 接下来实现客户端：
+   
+     示例客户端是一个WPF项目，一个TextBox，一个Button，一个TextBlock：
+   
+     ```xaml
+     <StackPanel Margin="15">
+     	<TextBlick Text="请输入数值：" />
+     	<TextBox Name="textInput" Margin="3,2,0,0" Width="100" HorizontalAlignment="Left" />
+     	<Button Content="调用服务" HorizontalAligment="Left" Padding="5,2" Margin="2,12,0,10" Click="OnClick" />
+     	<TextBlock Name="tbResult" Foreground="Red" FontSize="15" FonotWeight="Bold" Margin="2,3" />
+     </StackPanel>
+     ```
+   
+     此时先运行WCF服务器，然后打开解决方案资源管理器窗口，右击"引用"节点，添加服务引用，输入WCF服务的基址：http://localhost:500, 点击"转到"，最后点击"确定"。
+   
+     Visual Studio开发环境生成三个类型：
+   
+     - 根据服务协定生成一个接口
+     
+       ```
+       public interface IService
+       {
+       	double Sqr(doublie i);									// 同步接口
+       	System.Threading.Tasks.Task<double> SqrAsync(double i); // 异步接口
+       }
+       ```
+     
+     - 从刚才生成的IService接口与IClientChannel接口派生一个新接口
+     
+       ```
+       public interface IServiceChannel : TestClient.WSSample.IService, System.ServiceModel.IClientChannel
+       {
+       }
+       ```
+     
+       这只是可以让服务代理类的调用代码能够访问**客户端通道(ClientChannel)**的一些方法，如：调用Close方法关闭通信通道。开发者不需要实现IClientChannel接口，因为WCF运行时内部有默认的实现类型。
+     
+     - 最后一个类，派生自ClientBase<TChannel>，泛型参数TChannel可以用服务协定接口类型来替换，本例，可以用IService来替换
+     
+       ```
+       public partial class ServiceClient : System.ServiceModel.ClientBase<TestClient.WSSample.IService>, TestClient.WSSample.IService
+       {
+     	public ServiceClient()
+       	{
+       		public ServiceClient(string endpointConfigurationName): 
+       			base(endpointConfigurationName){		
+       		}
+       		
+       		public ServiceClient(string endpointConfigurationName, string remoteAddress) :
+       			base(endpointConfigurationName, remoteAddress){
+               }
+               
+               public ServiceClient(System.ServiceModel.Channels.Binding binding, System.ServiceModel.EndpointAddress remoteAddress) : 
+               	base(binding, remoteAddress){        	
+               }
+               
+               public double Sqr(double i){
+               	return base.Channel.Sqr(i);
+               }
+               
+               public System.Threading.Tasks.Task<double> SqrAsync(double i){
+               	return base.Channel.SqrAsync(i);
+               }
+       	}
+       }
+       ```
+       
+       基类ClientBase<TChannel>有一个**Channel属性**，派生类可以通过这个属性来访问服务协定的成员。
+       
+       生成代理类型后，服务调用就很简单了：
+       
+       ```
+       private async void OnClick(object sender, RoutedEventArgs e)
+       {
+       	Button btn = e.Source as Button;
+       	double ind = double.Parse(txtInput.Text);
+       	WSSample.ServiceClient client = new WSSample.ServiceClient();
+       	
+       	// 调用服务操作
+       	double retval = await client.SqrAsync(ind);
+       	
+       	// 显示结果
+       	tbResult.Text = $"计算结果：{retval}";
+       	btn.IsEnabled = true;
+       }
+       ```
+
+- 通道工厂
+
+  通过添加服务引用来生成客户端代理类，可以很简单的调用WCF服务，但这种方法要求WCF服务器必须公开元数据才能使用，**如果WCF服务器未公开元数据**，就要使用**通道工厂**。
+
+  通道工厂，ChannelFactory类，是一个抽象类，不能实例化，因此应使用它的派生类——ChannelFactory<TChannel>。
+
+  - 泛型参数TChannel指的是服务协定的接口类型。
+  - 通道工厂公开CreateChannel方法，调用该方法后，返回TChannel类型参数所指定的服务协定的接口类型。使用CreateChannel方法返回的协定实例，就可以调用WCF服务了。
+  - 尽管服务协定是接口类型，不能实例化，但运行库会自动生成一个代理实例，并以协定接口的类型返回，当代码通过协定接口调用WCF服务时，实际内部是由这个**代理实例**向服务器发送消息。
+
+  通道工厂两种使用方法:
+
+  - 直接调用静态版本的CreateChannel方法，得到服务协定的引用，然后调用WCF服务
+  - 先调用ChannelFactory<TChannel>类的构造函数进行实例化，然后调用实例版本的CreateChannel方法，来获取服务协定的引用，然后调用WCF服务。
+
+  **实例**：
+
+  - 前期准备：使用ChannelFactory<TChannel>类调用WCF前
+
+    - 必须知道服务终结点Uri，本例为：http://localhost:900/service
+    - Binding对象，此对象负责处理服务器和客户端之间通信的传输协议相关的参数，参与通信的双方必须使用相同的协议和参数。本例为：BasicHttpBinding
+
+  - 使用通道工厂来调用一个加法运算的WCF服务
+
+    ```
+    // 服务终结点URI
+    Uri svepUri = new Uri("http://localhost:900/service");
+    
+    // 创建终结点地址包装对象
+    EndpointAddress epaddr = new EndpointAddress(svepUri);
+    
+    // 创建用于与服务通信的绑定
+    BasicHttpBinding binding = new BasicHttpBinding();
+    
+    // 引用服务协定
+    ITestService svcontractInstance = ChannelFactory<ITestService>.CreateChannel(binding, epaddr);
+    
+    // 掉哟个WCF服务
+    int res = svcontractInstance.Add(3,17);
+    Console.WriteLine("调用结果:{0}", res);
+    
+    // 关闭通道
+    ((IClientChannel)svcontractInstance).Close();
+    ```
+
+  - 客户端重新声明了服务协定接口
+
+    ```
+    [ServiceContract(Namespace="demo-sv", Name="demo")]
+    interface ITestService
+    {
+    	[OperationContract(Name="add", Action="add-opt")]
+    	int Add(int x, int y);
+    }
+    ```
+
+    由于服务器上服务协定接口的名字为IDemo，而客户端中重新定义的服务协定接口的名字为ITestService，名字不同是无法通信的。但是，如果服务器和客户端两边**设置相同的 Namespace和Name属性**，则可以进行通信。
+
+  - 关闭通道代码
+
+    ```
+    // 关闭通道
+    ((IClientChannel)svcontractInstance).Close();
+    ```
+
+    服务协定接口，被强制转换为 IClientChannel 接口，然后调用Close方法来关闭通道。
+
+    还可以在客户端重新定义服务协定时，直接扩展IClientChannel接口：
+
+    ```
+    interface ITestService: IClientChannel
+    {
+    	int Add(int x, int y);
+    }
+    ```
+
+    完整示例代码 \第1章\Example_3。
+
+
+
+## 二. 消息与通道
+
+通过对SOAP消息和通道层的了解，理解WCF的通信过程。
+
+### 1. 消息基础
+
+- 客户端：
+
+  - 客户端向服务器发送请求，首先访问服务协定接口的某个方法（操作协定），将参数传递给方法
+  - 运行时把这些输入参数序列化（XML序列化），并创建一条SOAP（SimpleObjectAccessProtocol）消息，再把输入参数序列化后的内容，写入SOAP的正文（Body）中
+  - 通道层会使用特定的通信协议（如HTTP）把消息发送给服务器
+
+- 服务器：
+
+  - 通过通道层接收到客户端发来的SOAP消息，读出正文Body内容
+  - 将正文内容反序列化，就可以得到客户端所传送的输入参数列表
+  - 把这些参数传递给实现服务协定接口的服务类，即**调用服务方法**
+  - 向客户端返回一条SOAP消息（单项通信除外）
+    - 首先将服务方法的返回值序列化，然后创建一条SOAP消息，把序列化的返回值写入SOAP正文，经过通道层发送回客户端
+
+- SOAP消息：一个XML文档，以Envolope为跟元素，包括
+
+  - 正文（Body，或者叫主体）：Body元素下面可以用任何XML内容来充当消息正文
+  - 消息头（Header）：消息头会放置一些附加信息。可以是任意XML内容
+
+  ```xml
+  <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+  	<s:Header>
+  		<Action s:mustUnderstand= "1" xmlns="http://schemas.microsoft.com/ws/2005/05/addressing/none">
+  		my-act
+  		</Action>
+  	</s:Header>
+  	<s:Body>
+  		<Student xmlns="http://www.w3.org/2001/XMLSchema-instance" xmlns="http:/schemas.datacontract.org/2004/07">
+  			<Age>22</Age>
+  			<Name>小明</Name>
+  		</Student>
+  	</s:Body>
+  </s:Envelope>
+  ```
+
+#### 1.1 创建消息实例
+
+创建一条SOAP消息，需要用到Message类（System.ServiceModel.Channels）。Message类是抽象类，所以要调用CreateMessage方法创建Message实例。最常用的重载方法如下：
+
+```c#
+public static Message CreateMessage(MessageVersion version, string action, object body);
+```
+
+version：SOAP版本，可以从MessageVersion类的属性中获取
+
+**action**：一个非null的字符串，为必需的，表示SOAP消息中的**Action标头**，这个标头是一个标准元素，通过这个值，服务调度程序才能找到客户端要调用的服务方法。
+
+- 定义服务协定时，通过OperationContractAttribute的Action属性来指定一个有效的字符串值，用来唯一标识一个服务操作方法。例如：
+
+  ```
+  [ServiceContract(Namespace="sv-test")]
+  interface IService
+  {
+  	[OperationContract(Action="compute")]
+  	double Compute(double i);
+  }
+  ```
+
+  Compute方法的Action值为compute，它与服务协定的命名空间合起来就是sv-test/compute。当客户端调用Compute操作时，它发送的SOAP消息的Header中应该包含一个Action元素，并与操作协定上的相同：
+
+  ```xml
+  <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+  	<s:Header>
+  		<Action s:mustUnderstand= "1" xmlns="http://schemas.microsoft.com/ws/2005/05/addressing/none">
+  		sv-test/compute
+  		</Action>
+  	</s:Header>
+  	<s:Body>
+  		...
+  	</s:Body>
+  </s:Envelope>
+  ```
+
+  **WCF服务调度程序是通过`Action标头`来确认客户端到底要调用哪个服务操作的**。
+
+示例：下面将创建一条SOAP消息，并以字符串作为消息正文
+
+```
+Message msgl = Message.CreateMessage(MessageVersion.Soap11, "test-action","这是一条SOAP消息。");
+```
+
+示例：下面以一个自定义类型作为消息的正文：
+
+```
+public class Employee
+{
+	public string Name{get;set;}
+	public int Age{get;set;}
+	public string ID{get;set;}
+}
+
+// 实例化
+Employee emp = new Employee
+{
+	Name = "Mr. Liu",
+	Age = 32,
+	ID = "T-120005"
+}
+
+// 创建一个新的SOAP消息，并把Employee实例作为新消息的正文：
+Message msg2 = Message.CreateMessage(MessageVersion.Soap12,"demo-opt",emp);
+```
+
+#### 1.2 使用消息头
+
+调用CreateMessage方法创建新消息时，并不会创建自定义的消息头。要向消息实例添加消息头，应该访问Message类的Headers属性，它会返回一个对**MessageHeader类**的引用，然后调用它的Add方法来添加消息头。对于标准的消息头（如Action、To、MessageID等）可以直接通过MessageHeader类的公共属性来读写。
+
+MessageHeader是抽象类，通过调用CreateHeader方法来得到一个MessageHeader实例。
+
+示例：向SOAP消息添加消息头，然后从消息实例中分别读出消息头和消息正文。
+
+#### 1.3 自定义消息正文
+
+要实现自由编写XML内容，需要用到BodyWriter类，它是一个抽象类，开发人员可以实现它，以加入自定义的处理逻辑，具体，只要实现OnWriteBodyCotents抽象方法即可。这个方法带有一个XmlDictionaryWriter类型的参数，可以使用该参数来跟进需要去编写XML内容。
+
+BodyWriter类有一个派生类——StreamBodyWriter，同样有一个抽象方法OnWriteBodyCotents，它接收一个Stream类型的参数，该方法可以直接把自定义的内容写入流中。
+
+示例：
+
+- 首先，从BodyWriter派生要给子类
+
+  ```
+  class CustomBodyWriter:BodyWriter
+  {
+  	IDictionary<string,string> m_data;
+  	public CustomBodyWriter(IDictionary<sting,string> data):base(true)
+  	{
+  		m_data=data;
+  	}
+  	protected override void OnWriteBodyContents(XmlDictionaryWriter writer)
+  	{
+  		// 写入包装数据的元素
+  		writer.WriterStartElement("student_info");
+  		// 把字典中的key和value都写入XML元素
+  		foreach(string k in m_data.Keys)
+  		{
+  			write.WriteElementString(k,m_data[k]);
+  		}
+  		//写入包装元素的结束标记
+  		write.WriteEndElement();
+  		//将内容写入基础流
+  		write.Flush();
+  	}
+  }
+  ```
+
+  使用本类时，需要提供一个字典实例作为数据来源，在OnWriteBodyContents方法中，代码会将字典中每个项的Key和Value都写入XML元素中。
+
+- 准备一些测试数据：
+
+  ```
+  IDictionary<string,string> dic = new Dictionary<string,string>
+  {
+  	["name"]="小赵",
+  	["age"]="28",
+  	["city"]="广州"
+  }
+  ```
+
+  实例化CustomBodyWriter:
+
+  ```
+  CustomBodyWriter bw = new CustomBodyWriter(dic);
+  ```
+
+  创建消息实例，并将CustomBodyWriter实例传递给CreateMessage方法：
+
+  ```
+  Message msg = Message.CreateMessage(MessageVersion.Soap11,"test-data",bw);
+  ```
+
+- 结果
+
+  ```
+  <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+  	<s:Header>
+  		<Action s:mustUnderstand= "1" xmlns="http://schemas.microsoft.com/ws/2005/05/addressing/none">
+  		test-data
+  		</Action>
+  	</s:Header>
+  	<s:Body>
+  		<student_info>
+  			<name>小赵</name>
+  			<age>28</age>
+  			<city>广州</city>
+  		</student_info>
+  	</s:Body>
+  </s:Envelope>
+  ```
+
+  如果isBuffered=false，则不会包含自定义的正文内容：
+
+  ```
+  <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+  	<s:Header>
+  		<Action s:mustUnderstand= "1" xmlns="http://schemas.microsoft.com/ws/2005/05/addressing/none">
+  		test-data
+  		</Action>
+  	</s:Header>
+  	<s:Body>... stream...</s:Body>
+  </s:Envelope>
+  ```
+
+### 2. 使用内置通道
+
+WCF也支持使用通道（Channel）来直接通信。
+
+.NET类库公开了一系列接口，这些接口形成了WCF的"通道形状"。
+
+按照通道的通信方式分：单向通道、请求/应答通道、双向通信。
+
+按照通道的上下文状态分：无会话通道、带会话通道。
+
+直接使用通道来通信，通常只是收发消息，会话功能不明显，但是，当消息被调度到协定层，会话通信的作用就很明显了。
+
+#### 2.1 常见的通道形状接口
+
+![1570522310817](/1570522310817.png)
+
+#### 2.2 通道侦听器
+
+- 需要一个IChannelListener来侦听客户端的连接，与通道形状接口相似，侦听器接口也有内部实现类，可以直接使用
+- 绑定负责提供通信协议相关的信息。此处必须用到绑定。绑定公共基类Binding公开了BuildChannelListener方法，实例化绑定对象后，可以直接调用这个方法来创建通道侦听器。
+- 之后，需要调用AcceptChannel方法来接受客户端连接。
+- 连接后会返回一个通道对象的实例，类型由BuildChannelListener方法的类型参数TChannel决定，它表示要用来通信的通道类型，比如IDuplexChannel。
+
+#### 2.3 通道工厂
+
+这里的通道工厂与上一章不同，本章讲述的内容基于通道层，指位于System.ServiceModel.Channels下的IChannelFactory接口，可以实现，也可以直接使用内部的实现类，来创建通道实例。
+
+#### 2.4 示例：直接使用通道来通信
+
+
+
+## 三、协定
+
+WCF开发中用到的协定有服务协定、操作协定、数据协定和消息协定。
+
+### 1. 服务协定与操作协定
+
+服务协定类似一个接口，操作协定就是接口中的一个方法。因此，服务协定包含若干个操作协定。
+
+#### 1.1 服务协定的命名空间与名称
+
+在声明服务协定时，可以指定命名空间Namespace和协定名称Name，这两个属性值都会应用于服务所公开的元数据（WSDL文档）中。
+
+Namespace属性将作为WSDL文档中portType元素的命名空间，如不指定，默认值为http://tempuri.org
+
+Name属性应用于WSDL文档中portType元素的名称。
+
+如下协定：
+
+```
+[ServiceContract]
+interface IDemo
+{
+	[OperationContract]
+	int Add(int x,int y);
+}
+```
+
+用下面的方法获取协定的命名空间和名称：
+
+```
+ContractDescription ctdesc = ContractDescription.GetContract(typeof(IDemo));
+string s = $"服务协定名称：{ctdesc.Name}\n";
+s += $"服务协定的命名空间：{ctdes.Namespace}";
+Console.Writeline(s);
+
+屏幕输出：
+服务协定名称：IDemo
+服务协定的命名空间：http://tempuri.org/
+```
+
+在声明一个服务协定：显示设置命名空间和协定名称
+
+```
+[ServiceContract(Namespace="http://test.com",Name="MyTask")]
+interface IDemo
+{
+	[OperationContract]
+	int StartTask();
+}
+```
+
+#### 1.2 操作协定的Action值
+
+- Name属性
+
+  OperationContractAttribute类也有一个Name属性，用于声明操作协定的名称，默认是方法本身的名字。
+
+- Action属性：
+
+  客户端在调用服务时，会把要调用的操作方法的Action值加入到SOAP消息的Action消息头中(作为Header元素的子级)，服务器会根据消息头Action的内容来寻找客户端要调用的服务操作。Action属性是用来设置操作协定的标识的。
+
+  服务器端**调度程序**通过传入消息的Action头与服务中各个操作方法的Action属性进行匹配，找到就调用，未找到，则发生错误。
+
+  还可将Action属性设置为`*`，表示客户端传入的任意SOAP消息都与该操作匹配，都能调用此操作。
+
+- ReplyAction属性：
+
+  它表示SOAP消息中答复消息的Action头的内容。
+
+可以使用以下代码来获取服务协定中所包含的操作协定的信息。
+
+```
+ContractDescription cd = ContractDescription.GetContract(typeof(ITest));
+foreach(OperationDescription op in cd.Operations)
+{
+	Console.WriteLine($"操作名称：{op.Name}");
+	Console.WriteLine("-----------------");
+	foreach(MessageDescription msg in op.Messages)
+	{
+		Console.WriteLine($"Action = {msg.Action}");
+	}
+}
+```
+
+OperationDescription类用于描述每个操作协定相关的信息。
+
+注意：要获取操作协定的Action值，应先访问其Messages集合。由于本例是双向通信，因此包含两条消息:
+
+```
+操作名称：Run
+——————————————————
+Action = http://tempuri.org/ITest/Run
+Action = http://tempuri.org/ITest/RunResponse
+```
+
+**Action值是由服务协定命名空间与操作名称组成**。
+
+#### 1.3 直接把服务类声明为服务协定
+
+WCF开发过程，一般是先将一个接口类型声明为服务协定，再单独用一个类来实现服务协定，如下：
+
+```
+[ServiceContract]
+interface ITaskManager
+{
+	[OperationContract]
+	void StartRun();
+}
+
+class TaskManagerSvr:ITaskManager
+{
+	public void StartRun()
+	{
+		//...
+	}
+}
+```
+
+直接将服务类声明为服务协定：
+
+```
+[ServiceContract(Namespace="http://someone.net",Name="demo")]
+class MyService
+{
+	[OperationContract(Name="add", Action="add",ReplayAction="addResponse")]
+	public int Add(inta, int b)
+	{
+		return a+b;
+	}
+}
+```
+
+这样，就把定义接口和实现接口两个步骤合起来完成了，并直接让ServiceContractAttribute应用到MyService上。
+
+客户端，由于无须具体的执行代码，可以使用接口类型重新声明服务协定。
+
+```
+[ServiceContract(Namespace="http://someone.net",Name="demo")]
+public interface IService
+{
+	[OperationContract(Name="add",Action="add",ReplyAction="addResponse")]
+	int Add(int a,int b);
+}
+```
+
+有了OperationContractAttribute的约束，操作方法的名字可以与服务类不同，参数的名字也可以不一致，但是，方法的返回值类型必须一致，参数的个数和类型必须统一。
+
+#### 1.4 约束参数的名字
+
+通过服务协定和操作协定可以规范服务器和客户端之间的类型一致：
+
+- 服务协定：命名空间和操作名字
+
+- 操作协定：操作名字、Action、ReplyAction，操作方法的参数个数、类型和返回值类型匹配。
+
+方法参数名字不匹配，也会造成WCF服务调用失败，例如：
+
+- 服务端声明
+
+  ```
+  [ServiceContract(Namespace="my-sample",Name="num_sv")]
+  public interface IService
+  {
+  	[OperationContract(Name="NumWork",Action="work-req",ReplyAction="work-resp")]
+  	int Work(int x);
+  }
+  ```
+
+  服务端实现接口
+
+  ```
+  class MyService:IService
+  {
+  	public int Work(int x)
+  	{
+  		return x*x;
+  	}
+  }
+  ```
+
+- 客户端
+
+  ```
+  [ServiceContract(Namespace="my-sample",Name="num_sv")]
+  public interface IComputer
+  {
+  	[OperationContract(Name="NumWork",Action="work-req",ReplyAction="work-resp")]
+  	int Run(int k);
+  }
+  ```
+
+- 服务协定和操作协定匹配，尝试调用一下该服务
+
+  ```c#
+  IComputer channel = ChannelFactory<IComputer>.CreateChannel(binding, new EndpointAddress(uri));
+  int result = channel.Run(10);
+  Console.WriteLine("计算结果：{0}", result);
+  ((IClientChannel)channel).Close();
+  ```
+
+  预期结果为100，但返回结果为0。
+
+  错误原因是操作方法参数的名字不匹配。
+
+  比较：
+
+  ```
+  // 服务端
+  [ServiceContract(Namespace="my-sample",Name="num_sv")]
+  public interface IService
+  {
+  	[OperationContract(Name="NumWork",Action="work-req",ReplyAction="work-resp")]
+  	int Work(int x);
+  }
+  
+  // 客户端
+  [ServiceContract(Namespace="my-sample",Name="num_sv")]
+  public interface IComputer
+  {
+  	[OperationContract(Name="NumWork",Action="work-req",ReplyAction="work-resp")]
+  	int Run(int k);
+  }
+  ```
+
+  由于序列化参数的名字为k，而x得不到值，所以，x为0，返回的结果为0x0=0。
+
+  解决方案：
+
+  ```
+  // 服务端
+  [ServiceContract(Namespace="my-sample",Name="num_sv")]
+  public interface IService
+  {
+  	[OperationContract(Name="NumWork",Action="work-req",ReplyAction="work-resp")]
+  	int Work([MessageParameter(Name="num")]int x);
+  }
+  
+  // 客户端
+  [ServiceContract(Namespace="my-sample",Name="num_sv")]
+  public interface IComputer
+  {
+  	[OperationContract(Name="NumWork",Action="work-req",ReplyAction="work-resp")]
+  	int Run([MessageParameter(Name="num")]int k);
+  }
+  ```
+
+### 2. 数据协定
+
+WCF应用程序通过序列化(通常是XML方式)技术来传递数据，对于.NET中的基本类型(如string、int、double、byte等，也包括DateTime类型)都可以自动完成序列化，但，对于自定义的**复杂类型，应该声明为数据协定**。
+
+数据协定使得服务器与客户端共享相同的协定，确保双方在通信过程中都能识别自定义类型。
+
+自定义复杂类型通常是开发者声明的类或者结构。
+
+#### 2.1 数据协定与序列化
+
+要让自定义类型成为**数据协定**，应该将`DataContractAttribute`应哟个于类型，把`DataMemberAttribute`应用到类型成员上（字段或属性）
+
+示例：
+
+- 新建一个控制台程序项目
+
+- 为项目添加System.Runtime.Serialization程序集的引用
+
+- 定义一个类，命名为Student：
+
+  ```
+  class Student
+  {
+  	internal string Name{get;set;}
+  	internal int Age{get;set;}
+  	internal DateTime Birthday{get;set;}
+  }
+  ```
+
+- 在Student类上应用DataContractAttribute
+
+  ```
+  [DataContract]
+  class Student
+  {
+  	...
+  }
+  ```
+
+  默认情况下，数据协定的名字和类型名字相同，也可以明确指定数据协定的命名空间和名称：
+
+  ```
+  [DataContract(Namespace="http://demo",Name="student")]
+  class Student
+  {
+  	...
+  }
+  ```
+
+- 为类型的各个成员应用DataMemberAttribute
+
+  ```
+  [DataContract(Namespace="http://demo",Name="student")]
+  class Student
+  {
+  	[DataMember(Name="name")]
+  	internal string Name{get;set;}
+  	[DataMember(Name="age")]
+  	internal int Age{get;set;}
+  	[DataMember(Name="birthday")]
+  	internal DateTime Birthday{get;set;}
+  }
+  ```
+
+  如果不设置Name属性，则序列化时就是使用类型成员的名字。
+
+- 要将数据协定类型实例序列化，应使用DataContractSerializer类
+
+  ```
+  // 将序列化的内容写入内存流
+  MemoryStream stream = new MemoryStream();
+  DataContractSerializer dsz = new DataContractSerializer(typeof(Student));
+  Student stuobj = new Student
+  {
+  	Name="小张",
+  	Age=23,
+  	Birthday=new DateTime(1988,7,12)
+  }
+  // 序列化
+  dsz.WriteObject(stream, stuobj);
+  ```
+
+- 下列代码将刚才写进内存流中的XML文档显示出来
+
+  ```
+  stream.Position = 0L;
+  XDocument xmldoc = XDocument.Load(stream);
+  Console.WriteLine($"\n序列化后的XML文档：\n(xmldoc)");
+  ```
+
+  Student实例序列化后生成的XML文档如下：
+
+  ```
+  <student xmlns="http://demo" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  	<age>23</age>
+  	<birthday>1988-07-12T00:00:00</birthday>
+  	<name>小张</name>
+  </student>
+  ```
+
+- 下列代码将进行反序列化，并填充新的Student实例
+
+  ```
+  // 反序列化
+  stream.Position = 0L;
+  Student scobj = (Student)dsz.ReadObject(stream);
+  ```
+
+#### 2.2 数据成员序列化的顺序
+
+示例，先声明一个数据协定类型
+
+```
+[DataContract]
+public class Product
+{
+	[DataMember]
+	public Guid ID{get;set;}
+	[DataMember]
+	public string DescName{get;set;}
+	[DataMember]
+	public float Size{get;set;}
+}
+```
+
+=>序列化后
+
+```
+<Product>
+	<DescName>产品A</DescName>
+	<ID>0a0c2f5c-150b-4511-b439-96736bf190b0</ID>
+	<Size>5.33</Size>
+</Product>
+```
+
+各元素是按首字母来排序的。
+
+如果想设置规定排序的化，可以设置Order属性
+
+```
+[DataContract]
+public class Product
+{
+	[DataMember(Order=3)]
+	public Guid ID{get;set;}
+	[DataMember(Order=8)]
+	public string DescName{get;set;}
+	[DataMember(Order=6)]
+	public float Size{get;set;}
+}
+```
 
