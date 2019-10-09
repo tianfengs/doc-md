@@ -205,6 +205,58 @@ WCF（Windows Communication Foundation）是一个框架，用于构建面向服
      设置完ServiceHost各个参数后，就可以调用Open方法打开服务，只有在服务出游打开状态下，客户端才能访问。在调用Open方法之前必须完成所有的服务配置，如向服务添加一个终结点，或者可以配置服务器证书等，服务一旦打开，就不能进行配置了。
      
      配置WCF服务：**使用代码**，**使用配置文件**。
+     
+     注意：由于服务器未发布元数据，因此访问 http://localhost:500 的时候，会显示如下错误信息：
+     
+     ```
+     Service
+     
+     这是 Windows© Communication Foundation 服务。
+     
+     当前已禁用此服务的元数据发布。
+     
+     如果具有该服务的访问权限，则可以通过完成下列步骤来修改 Web 或应用程序配置文件以便启用元数据发布:
+     1. 创建下列服务行为配置，或将 <serviceMetadata> 元素添加到现有服务行为配置:
+     <behaviors>
+         <serviceBehaviors>
+             <behavior name="MyServiceTypeBehaviors" >
+                 <serviceMetadata httpGetEnabled="true" />
+             </behavior>
+         </serviceBehaviors>
+     </behaviors>
+     2. 将行为配置添加到服务:
+     <service name="MyNamespace.MyServiceType" behaviorConfiguration="MyServiceTypeBehaviors" >
+     注意: 服务名称必须与服务实现的配置名称相匹配。
+     
+     3. 将下列终结点添加到服务配置:
+     <endpoint contract="IMetadataExchange" binding="mexHttpBinding" address="mex" />
+     注意: 服务必须有一个 http 基址以便添加此终结点。
+     下面是启用了元数据发布的示例服务配置文件:
+     <configuration>
+         <system.serviceModel>
+      
+             <services>
+                 <!-- 注意: 服务名称必须与服务实现的配置名称相匹配。 -->
+                 <service name="MyNamespace.MyServiceType" behaviorConfiguration="MyServiceTypeBehaviors" >
+                     <!-- 添加下列终结点。 -->
+                     <!-- 注意: 服务必须有一个 http 基址以便添加此终结点。 -->
+                     <endpoint contract="IMetadataExchange" binding="mexHttpBinding" address="mex" />
+                 </service>
+             </services>
+      
+             <behaviors>
+                 <serviceBehaviors>
+                     <behavior name="MyServiceTypeBehaviors" >
+                         <!-- 将下列元素添加到服务行为配置中。 -->
+                         <serviceMetadata httpGetEnabled="true" />
+                     </behavior>
+                 </serviceBehaviors>
+             </behaviors>
+      
+         </system.serviceModel>
+     </configuration>
+     有关发布元数据的详细信息，请参见下列文档: http://go.microsoft.com/fwlink/?LinkId=65455。
+     ```
 
 ### 2. 调用WCF服务
 
@@ -282,6 +334,68 @@ WCF（Windows Communication Foundation）是一个框架，用于构建面向服
        **行为（Behavior）**用来描述服务将支持哪些扩展功能，比如是否支持获取元数据、是否把服务器上的错误信息传回给客户端/服务类实例在何时被清理等。
        
        本例中则需要**ServiceMetadataBehavior类**来使服务支持**向客户端公开元数据**。
+       
+       注意：开启此公开元数据的服务后，登录http://localhost:500 获得如下信息：
+       
+       ```
+       MyService 服务
+       
+       已创建服务。
+       
+       若要测试此服务，需要创建一个客户端，并将其用于调用该服务。可以使用下列语法，从命令行中使用 svcutil.exe 工具来进行此操作:
+       svcutil.exe http://localhost:500/?wsdl
+       您还可以访问作为单个文件的服务说明:
+       http://localhost:500/?singleWsdl
+       这将生成一个配置文件和一个包含客户端类的代码文件。请将这两个文件添加到客户端应用程序，并使用生成的客户端类来调用服务。例如:
+       C#
+       class Test
+       {
+           static void Main()
+           {
+               ServiceClient client = new ServiceClient();
+       
+               // 使用 "client" 变量在服务上调用操作。
+       
+               // 始终关闭客户端。
+               client.Close();
+           }
+       }
+       
+       Visual Basic
+       Class Test
+           Shared Sub Main()
+               Dim client As ServiceClient = New ServiceClient()
+               ' 使用 "client" 变量在服务上调用操作。
+       
+               ' 始终关闭客户端。
+               client.Close()
+           End Sub
+       End Class
+       ```
+       
+       访问元数据XML文档`http://localhost:500/?wsdl` 
+       
+       访问服务说明页`http://localhost:500/?singleWsdl` 
+       
+       用`svcutil.exe http://localhost:500/?wsdl`生成两个客户端文件，一个是客户端类的代码文件，一个是客户端配置文件，可以直接用来调用服务
+       
+       - MyService.cs
+       - output.config
+       
+       使用客户端类调用服务的代码如下：
+       
+       ```c#
+       static void Main(string[] args)
+       {
+           ServiceClient client = new ServiceClient();
+           double retval = client.Sqr(10);
+           Console.WriteLine($"10x10计算结果是：{retval}");
+           Console.ReadKey();
+       }
+       
+       屏幕输出为：
+       10x10计算结果是：100
+       ```
      
    - 接下来实现客户端：
    
@@ -289,10 +403,10 @@ WCF（Windows Communication Foundation）是一个框架，用于构建面向服
    
      ```xaml
      <StackPanel Margin="15">
-     	<TextBlick Text="请输入数值：" />
+     	<TextBlock Text="请输入数值：" />
      	<TextBox Name="textInput" Margin="3,2,0,0" Width="100" HorizontalAlignment="Left" />
-     	<Button Content="调用服务" HorizontalAligment="Left" Padding="5,2" Margin="2,12,0,10" Click="OnClick" />
-     	<TextBlock Name="tbResult" Foreground="Red" FontSize="15" FonotWeight="Bold" Margin="2,3" />
+     	<Button Content="调用服务" HorizontalAlignment="Left" Padding="5,2" Margin="2,12,0,10" Click="OnClick" />
+     	<TextBlock Name="tbResult" Foreground="Red" FontSize="15" FontWeight="Bold" Margin="2,3" />
      </StackPanel>
      ```
    
@@ -407,7 +521,7 @@ WCF（Windows Communication Foundation）是一个框架，用于构建面向服
     // 引用服务协定
     ITestService svcontractInstance = ChannelFactory<ITestService>.CreateChannel(binding, epaddr);
     
-    // 掉哟个WCF服务
+    // 调用这个WCF服务
     int res = svcontractInstance.Add(3,17);
     Console.WriteLine("调用结果:{0}", res);
     
