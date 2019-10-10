@@ -783,7 +783,7 @@ WCF也支持使用通道（Channel）来直接通信。
 
 按照通道的上下文状态分：无会话通道、带会话通道。
 
-直接使用通道来通信，通常只是收发消息，会话功能不明显，但是，当消息被调度到协定层，会话通信的作用就很明显了。
+直接使用**通道层**来**通信**，通常只是收发消息，会话功能不明显，但是，当消息被调度到协定层，会话通信的作用就很明显了。
 
 #### 2.1 常见的通道形状接口
 
@@ -791,10 +791,12 @@ WCF也支持使用通道（Channel）来直接通信。
 
 #### 2.2 通道侦听器
 
-- 需要一个IChannelListener来侦听客户端的连接，与通道形状接口相似，侦听器接口也有内部实现类，可以直接使用
-- 绑定负责提供通信协议相关的信息。此处必须用到绑定。绑定公共基类Binding公开了BuildChannelListener方法，实例化绑定对象后，可以直接调用这个方法来创建通道侦听器。
-- 之后，需要调用AcceptChannel方法来接受客户端连接。
-- 连接后会返回一个通道对象的实例，类型由BuildChannelListener方法的类型参数TChannel决定，它表示要用来通信的通道类型，比如IDuplexChannel。
+类似Socket实现机制
+
+- 需要一个**IChannelListener来侦听客户端的连接**，与通道形状接口相似，侦听器接口也有内部实现类，可以直接使用
+- **绑定**负责提供通信协议相关的信息。此处必须用到绑定。绑定公共基类Binding公开了**BuildChannelListener**方法，实例化绑定对象后，可以直接调用这个方法来**创建通道侦听器**。
+- 之后，需要**调用AcceptChannel**方法来**接受客户端连接**(类似Socket的Accept)。
+- 连接后会**返回一个通道对象的实例**，类型由BuildChannelListener方法的类型参数TChannel决定，它表示要用来通信的**通道类型**，比如IDuplexChannel。
 
 #### 2.3 通道工厂
 
@@ -802,7 +804,120 @@ WCF也支持使用通道（Channel）来直接通信。
 
 #### 2.4 示例：直接使用通道来通信
 
+本例使用 `请求/应答模式`的通道接口（IRequestChannel与IReplyChannel），并配合BasicHttpBinding进行通信演示。
 
+**服务器代码**：
+
+```c#
+// 服务器侦听连接的地址
+Uri listUri = new Uri("http://localhost:900");
+
+// 实例化绑定对象
+BasicHttpBinding binding = new BasicHttpBinding();
+
+// 创建通道监听器
+IChannelListener<IReplyChannel> listener = null;
+if(binding.CanBuildChannelListener<IReplyChannel>())
+{
+	listener = binding.BuildChannelListener<IReplayChannel>(listUri);
+	
+	listener.Open();
+	
+	while(true)
+	{
+		IReplyChannel reply = listener.AcceptChannel();
+		// 打开通道
+		reply.Open();
+		// 接收客户端的消息
+		RequestContext context = reply.ReceiveRequest();
+		// 获取客户端发送的内容
+		string msg = context.RequestMessage.GetBody<string>();
+		Console.WriteLine($"来自客户端的消息：{msg}");
+		// 回复消息
+		Message replymsg = Message.CreateMessage(binding.MessageVersion, "test-reply", "已收到消息。");
+		context.Reply(replymsg);
+		// 关闭通道
+		reply.Close();
+		//
+		Console.WriteLine("请按任意键继续，按ESC键退出。");
+		ConsoleKeyInfo key = Console.ReadKey();
+		if(key.Key == ConsoleKey.Escape)
+			break;
+	}
+	
+	// 关闭侦听器
+	listener.Close();
+}
+
+```
+
+用`CanBuildChannelListener()`检测是否支持创建通道监听器
+
+如果可以，就调用`AcceptChannel()`方法来接受客户端的连接，然后就可以收发消息了
+
+**客户端代码**：
+
+```c#
+Uri servUri = new Uri("http//localhost:900");
+// 实例化绑定对象
+BasicHttpBinding binding = new BasicHttpBinding();
+// 创建通道工厂
+IChannelFactory<IRequestChannel> reqfac = null;
+if(binding.CanBuildChannelFactory<IRequestChannel>())
+{
+	reqfac = binding.BuildChannelFactory<IRequestChannel>();
+}
+// 创建通道
+if(reqfac != null)
+{
+	// 打开通道工厂
+	reqfac.Open();
+	EndpointAddress epaddr = new EndpointAddress(servUri);
+	IRequestChannel channel = reqfac.CreateChannel(epaddr);
+	// 打开通道
+	channel.Open();
+	// 向服务器发送消息
+	Message msg = Message.CreateMessage(binding.MessageVersion,"test-request","你好，我是客户端;
+	Message replymsg = channel.Request(msg);
+	// 输出服务器回应的消息
+	string rmsg = replymsg.GetBody<string>();
+	Console.WriteLine($"从服务器返回的消息：{rmsg}");
+	// 关闭通道
+	channel.Close();
+}
+
+Console.Read();
+// 关闭通道工厂
+reqfac.Close();
+```
+
+通道监听器、通道工厂、通道对象，由于这些接口都继承自一个公共接口——ICommunicationObject，因此，使用前必须调用Open()，使用后要调用Close()。
+
+### 3 注意消息的状态
+
+WCF通信过程中，Message类的State属性，用于描述当前小时实例的状态，各状态都封装在`MessageState枚举`中。
+
+为了保证在一轮通信中消息只使用一次，WCF通道只允许State为Created的消息参与通信。如果消息被写入到流中，或被读取或复制过，都不能用于通信。
+
+如果消息被复制或写入到流中，又希望发送此消息，要先将消息复制到MessageBuffer中缓存，在调用此类的CreateMessage()方法重新创建一条新消息，就可以了:
+
+```c#
+// 创建通道
+EndpointAddress epaddr = new EndpointAddress(base_uri);
+IRequestChannel channel = fac.CreateChannel(epaddr);
+channel.Open();
+// 发送消息
+Message msg = Message.CreateMessage(myBinding.MessageVersion,"http://test","消息");
+MessageBuffer bf = msg.CreateBufferedCopy(2048);	// 被复制过的消息，发送会报错
+Message newMsg = bf.CreateMessage();				// 重新创建消息
+channel.Request(newMsg);							// 就可以被发送
+// 关闭通道
+channel.Close();
+```
+
+发送被复制过的消息，发生异常
+
+<img src="/1570697324530.png" alt="1570697324530" style="zoom: 80%;" />
 
 ## 三、协定
 
@@ -814,11 +929,11 @@ WCF开发中用到的协定有服务协定、操作协定、数据协定和消�
 
 #### 1.1 服务协定的命名空间与名称
 
-在声明服务协定时，可以指定命名空间Namespace和协定名称Name，这两个属性值都会应用于服务所公开的元数据（WSDL文档）中。
+在声明服务协定时，可以指定**命名空间**Namespace和**协定名称**Name，这两个属性值都会应用于服务所公开的元数据（WSDL文档）中。
 
-Namespace属性将作为WSDL文档中portType元素的命名空间，如不指定，默认值为http://tempuri.org
+Namespace属性将作为WSDL文档中portType元素的**命名空间**，如不指定，默认值为**http://tempuri.org**
 
-Name属性应用于WSDL文档中portType元素的名称。
+Name属性应用于WSDL文档中portType元素的**名称**。默认值为 **接口名**(即 **服务协定名称**)。
 
 如下协定：
 
@@ -859,11 +974,11 @@ interface IDemo
 
 - Name属性
 
-  OperationContractAttribute类也有一个Name属性，用于声明操作协定的名称，默认是方法本身的名字。
+  OperationContractAttribute类也有一个Name属性，用于声明**操作协定名称**，默认是**方法名**。
 
 - Action属性：
 
-  客户端在调用服务时，会把要调用的操作方法的Action值加入到SOAP消息的Action消息头中(作为Header元素的子级)，服务器会根据消息头Action的内容来寻找客户端要调用的服务操作。Action属性是用来设置操作协定的标识的。
+  客户端在调用服务时，会把要调用的操作方法的**Action值加入到SOAP消息的Action消息头中(作为Header元素的子级)**，服务器会根据消息头Action的内容来寻找客户端要调用的服务操作。Action属性是用来设置操作协定的标识的。
 
   服务器端**调度程序**通过传入消息的Action头与服务中各个操作方法的Action属性进行匹配，找到就调用，未找到，则发生错误。
 
@@ -899,9 +1014,29 @@ Action = http://tempuri.org/ITest/Run
 Action = http://tempuri.org/ITest/RunResponse
 ```
 
-**Action值是由服务协定命名空间与操作名称组成**。
+**Action值是由服务协定命名空间与操作名称组成：服务协定命名空间/服务协定名/操作协定名(Response)**。
 
-#### 1.3 直接把服务类声明为服务协定
+如果：设置Action和ReplyAction，如
+
+```
+[ServiceContract]
+interface IDemo
+{
+	[OperationContract(Name="add", Action="add-opt", ReplyAction="reply-opt")]
+	int StartTask();
+}
+```
+
+则上面范例程序会显示如下
+
+```
+操作名称：add
+——————————————————
+Action = add-opt
+Action = reply-opt
+```
+
+#### 1.3 直接把服务类声明为服务协定 
 
 WCF开发过程，一般是先将一个接口类型声明为服务协定，再单独用一个类来实现服务协定，如下：
 
@@ -1060,7 +1195,7 @@ WCF应用程序通过序列化(通常是XML方式)技术来传递数据，对于
 
 #### 2.1 数据协定与序列化
 
-要让自定义类型成为**数据协定**，应该将`DataContractAttribute`应哟个于类型，把`DataMemberAttribute`应用到类型成员上（字段或属性）
+要让自定义类型成为**数据协定**，应该将`DataContractAttribute`应用于类型，把`DataMemberAttribute`应用到类型成员上（字段或属性）
 
 **示例**：
 
@@ -1070,7 +1205,7 @@ WCF应用程序通过序列化(通常是XML方式)技术来传递数据，对于
 
 - 定义一个类，命名为Student：
 
-  ```
+  ```c#
   class Student
   {
   	internal string Name{get;set;}
@@ -1313,5 +1448,74 @@ sz.WriteObject(stream, car);
 
 #### 2.4 将枚举类型声明为数据协定
 
+如果数据协定的类型是"枚举"，其成员就不能应用DataMemberAttribute，而要改用EnumMemberAttribute。
 
+下列代码声明一个Colors枚举；
+
+```c#
+[DataContract(Namespace="http://color",Name="color")]
+enum Colors
+{
+	[EnumMember(Value="red")]
+	R,
+	[EnumMember(Value="green")]
+	G,
+	[EnumMember(Value="blue")]
+	B
+}
+```
+
+把Colors枚举的实例序列化：
+
+```c#
+Colors c= Colors.B;
+DataContractSerializer sz= new DataContractSerializer(typeof(Colors));
+sz.WriteObject(stream, c);
+```
+
+序列化后生成的XML如下：
+
+```xml
+<color xmlns="http://color">blue</color>
+```
+
+进行反序列化：
+
+```c#
+Colors c2=(Colors)sz.ReadObject(stream);
+```
+
+#### 2.5 已知类型
+
+两个数据协定：
+
+```
+[DataContract]
+public class Student
+{
+	[DataMember]
+	public string Name{get;set;}
+	[DataMember]
+	public int Age{get;set;}
+	[DataMember]
+	public object Address{get;set;}
+}
+
+[DataContract]
+public class AddressInfo
+{
+	[DataMember]
+	public string Province{get;set;}
+	[DataMember]
+	public string City{get;set;}
+	[DataMember]
+	public string ZipCode{get;set;}
+}
+```
+
+注意：Student类的Address属性是object类型，实例化后，Address属性会赋值一个AddressInfo实例对象。
+
+```
+
+```
 
