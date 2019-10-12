@@ -89,7 +89,7 @@ WCF（Windows Communication Foundation）是一个框架，用于构建面向服
 - 客户端通过服务引用个来调用WCF服务
 - 使用ChannelFactory类来调用WCF服务
 
-### 1. WCF服务的基本实现步骤
+### 1.1. WCF服务的基本实现步骤
 
    WCF服务端的实现步骤：
 
@@ -258,7 +258,7 @@ WCF（Windows Communication Foundation）是一个框架，用于构建面向服
      有关发布元数据的详细信息，请参见下列文档: http://go.microsoft.com/fwlink/?LinkId=65455。
      ```
 
-### 2. 调用WCF服务
+### 1.2. 调用WCF服务
 
    客户端可以通过两种方法来调用WCF服务
 
@@ -568,7 +568,7 @@ WCF（Windows Communication Foundation）是一个框架，用于构建面向服
 
 通过对SOAP消息和通道层的了解，理解WCF的通信过程。
 
-### 1. 消息基础
+### 2.1. 消息基础
 
 - 客户端：
 
@@ -773,7 +773,7 @@ BodyWriter类有一个派生类——StreamBodyWriter，同样有一个抽象方
   </s:Envelope>
   ```
 
-### 2. 使用内置通道
+### 2.2. 使用内置通道
 
 WCF也支持使用通道（Channel）来直接通信。
 
@@ -785,11 +785,11 @@ WCF也支持使用通道（Channel）来直接通信。
 
 直接使用**通道层**来**通信**，通常只是收发消息，会话功能不明显，但是，当消息被调度到协定层，会话通信的作用就很明显了。
 
-#### 2.1 常见的通道形状接口
+#### 2.2.1 常见的通道形状接口
 
 ![1570522310817](/1570522310817.png)
 
-#### 2.2 通道侦听器
+#### 2.2.2 通道侦听器
 
 类似Socket实现机制
 
@@ -798,11 +798,11 @@ WCF也支持使用通道（Channel）来直接通信。
 - 之后，需要**调用AcceptChannel**方法来**接受客户端连接**(类似Socket的Accept)。
 - 连接后会**返回一个通道对象的实例**，类型由BuildChannelListener方法的类型参数TChannel决定，它表示要用来通信的**通道类型**，比如IDuplexChannel。
 
-#### 2.3 通道工厂
+#### 2.2.3 通道工厂
 
 这里的通道工厂与上一章不同，本章讲述的内容基于通道层，指位于System.ServiceModel.Channels下的IChannelFactory接口，可以实现，也可以直接使用内部的实现类，来创建通道实例。
 
-#### 2.4 示例：直接使用通道来通信
+#### 2.2.4 示例：直接使用通道来通信
 
 本例使用 `请求/应答模式`的通道接口（IRequestChannel与IReplyChannel），并配合BasicHttpBinding进行通信演示。
 
@@ -893,7 +893,7 @@ reqfac.Close();
 
 通道监听器、通道工厂、通道对象，由于这些接口都继承自一个公共接口——ICommunicationObject，因此，使用前必须调用Open()，使用后要调用Close()。
 
-### 3 注意消息的状态
+### 2.3 注意消息的状态
 
 WCF通信过程中，Message类的State属性，用于描述当前小时实例的状态，各状态都封装在`MessageState枚举`中。
 
@@ -923,11 +923,11 @@ channel.Close();
 
 WCF开发中用到的协定有服务协定、操作协定、数据协定和消息协定。
 
-### 1. 服务协定与操作协定
+### 3.1. 服务协定与操作协定
 
 服务协定类似一个接口，操作协定就是接口中的一个方法。因此，服务协定包含若干个操作协定。
 
-#### 1.1 服务协定的命名空间与名称
+#### 3.1.1 服务协定的命名空间与名称
 
 在声明服务协定时，可以指定**命名空间**Namespace和**协定名称**Name，这两个属性值都会应用于服务所公开的元数据（WSDL文档）中。
 
@@ -970,7 +970,7 @@ interface IDemo
 }
 ```
 
-#### 1.2 操作协定的Action值
+#### 3.1.2 操作协定的Action值
 
 - Name属性
 
@@ -1036,7 +1036,7 @@ Action = add-opt
 Action = reply-opt
 ```
 
-#### 1.3 直接把服务类声明为服务协定 
+#### 3.1.3 直接把服务类声明为服务协定 
 
 WCF开发过程，一般是先将一个接口类型声明为服务协定，再单独用一个类来实现服务协定，如下：
 
@@ -1086,7 +1086,7 @@ public interface IService
 
 有了OperationContractAttribute的约束，操作方法的名字可以与服务类不同，参数的名字也可以不一致，但是，方法的返回值类型必须一致，参数的个数和类型必须统一。
 
-#### 1.4 约束参数的名字
+#### 3.1.4 约束参数的名字
 
 通过服务协定和操作协定可以规范服务器和客户端之间的类型一致：
 
@@ -1185,7 +1185,7 @@ public interface IService
   }
   ```
 
-### 2. 数据协定
+### 3.2. 数据协定
 
 WCF应用程序通过序列化(通常是XML方式)技术来传递数据，对于.NET中的基本类型(如string、int、double、byte等，也包括DateTime类型)都可以自动完成序列化，但，对于自定义的**复杂类型，应该声明为数据协定**。
 
@@ -1193,7 +1193,7 @@ WCF应用程序通过序列化(通常是XML方式)技术来传递数据，对于
 
 自定义复杂类型通常是开发者声明的类或者结构。
 
-#### 2.1 数据协定与序列化
+#### 3.2.1 数据协定与序列化
 
 要让自定义类型成为**数据协定**，应该将`DataContractAttribute`应用于类型，把`DataMemberAttribute`应用到类型成员上（字段或属性）
 
@@ -1293,7 +1293,7 @@ WCF应用程序通过序列化(通常是XML方式)技术来传递数据，对于
   Student scobj = (Student)dsz.ReadObject(stream);
   ```
 
-#### 2.2 数据成员序列化的顺序
+#### 3.2.2 数据成员序列化的顺序
 
 示例，先声明一个数据协定类型
 
@@ -1347,7 +1347,7 @@ public class Product
 </Product>
 ```
 
-#### 2.3 必需成员`IsRequired`与可忽略成员`IgnoreDataMember` 
+#### 3.2.3 必需成员`IsRequired`与可忽略成员`IgnoreDataMember` 
 
 **必需成员**要求反序列化过程中必须找到指定的成员。一般情况下,如果XML数据中缺少某个成员的值,反序列化程序会为对象实例中的对应成员保留默认值(如果成员类型是int,默认为0;如果是string,则默认为null)。若是某个成员被标记为必需成员,反序列化的时候,如果找不到指定的成员的值,就会引发异常。
 
@@ -1446,7 +1446,7 @@ sz.WriteObject(stream, car);
 </car>
 ```
 
-#### 2.4 将枚举类型声明为数据协定
+#### 3.2.4 将枚举类型声明为数据协定
 
 如果数据协定的类型是"枚举"，其成员就不能应用DataMemberAttribute，而要改用EnumMemberAttribute。
 
@@ -1485,7 +1485,7 @@ sz.WriteObject(stream, c);
 Colors c2=(Colors)sz.ReadObject(stream);
 ```
 
-#### 2.5 已知类型
+#### 3.2.5 已知类型
 
 两个数据协定：
 
@@ -1519,3 +1519,263 @@ public class AddressInfo
 
 ```
 
+
+
+### 3.3. 使用XML序列化
+
+除了使用`DataContractSerializer类`将数据对象序列化为XML文档外，WCF还支持传统的XML序列化模型，可以使用XmlElementAttribute、XmlAttributeAttribute等特性来休息类型的成员。
+
+```c#
+public class AudioTrack
+{
+	[XmlAttribute(AttributeName="title")]
+	public string Title {get;set;}
+	[XmlAttribute(AttributeName="artist")]
+	public string Artist {get;set;}
+	[XmlAttribute(AttributeName="no")]
+	public int TrackNo {get;set;}
+	[XmlAttribute(AttributeName="album")]
+	public string Album {get;set;}
+}
+```
+
+此类没有定义为数据协定，而是**应用XmlAttributeAttribute**，该特性使得**类型成员被序列化成****XML的特性值**，而不是XML元素。
+
+然后声明服务协定，AudioTrack类将作为服务操作的一个输入参数传递。
+
+```
+[ServiceContract, XmlSerializerFormat]
+interface IDemo
+{
+	[OperationContract]
+	void PostMusic(AudioTrack track);
+}
+```
+
+由于WCF默认使用DataContractSerializer类进行序列化，因此需要再服务协定或操作协定上应用XmlSerializerFormatAttribute。
+
+**传统XML序列化：数据协定只能作用于公共类型**。
+
+XmlSerializerFormatAttribute类的属性——**Use**，应设置为Literal，而不是Encoded，来规划生成的XML内容。
+
+### 3.4. 消息协定
+
+- **数据协定**：面向自定义类型而声明的对象及其成员的约定。
+
+- **消息协定**：是将类型成员映射到SOAP消息的各个部分中，约定哪些成员会被放到消息头，哪些成员会被放到消息正文中。
+
+示例：声明一个Data类，包含四个属性，消息协定
+
+```c#
+[MessageContract]
+public class Data
+{
+	[MessageHeader]
+	public int ID{ get; set;}
+	[MessageHeader]
+	public string Token{ get; set;}
+	
+	[MessageBodyMember]
+	public string Description{ get; set;}
+	[MessageBodyMember]
+	public long ByteLen{ get; set;}
+}
+```
+
+消息协定允许开发者以面向对象的方式来安排SOAP消息的内容，从而使消息的结构更加灵活。
+
+#### 3.4.1 消息协定的基本用法
+
+示例：
+
+实现步骤：
+
+- 新建一个控制台项目
+
+- 声明消息协定，名称为ProductItem
+
+  ```
+  [MessageContract]
+  public class ProductItem
+  {
+  	[MessageBodyMember]
+  	public string Name{ get; set;}	
+  	[MessageBodyMember]
+  	public string Color{ get; set;}
+  	[MessageBodyMember]
+  	public int PID{ get; set;}
+  	[MessageHeader]
+  	public DateTime PostTime{ get; set;}
+  ```
+
+- 声明服务协定，代码如下
+
+  ```
+  [ServiceContract]
+  public interface IService
+  {
+  	[OperationContract]
+  	void NewProduct(ProductItem item);
+  }
+  ```
+
+- 定义服务类，实现服务协定
+
+  ```
+  class MyService:IService
+  {
+  	public void NewProduct(ProductItem item)
+  	{
+  		string str=$"{nameof(ProductItem.PostTime)}={item.PostTime:D}";
+  		str += $"\n{nameof(ProductItem.PID)}={item.PoID}";
+  		str += $"\n{nameof(ProductItem.Name)}={item.Name}";
+  		str += $"\n{nameof(ProductItem.Color)}={item.Color}";
+  		Console.WriteLine("收到来自客户端的数据：\n{0}",str);
+  	}
+  }
+  ```
+
+- 实例化服务主机，寄宿并运行服务
+
+  ```
+  ServiceHost host=new ServiceHost(typeof(MyService),new Uri("http://localhost:800"));
+  // 打开服务
+  host.Open();
+  Console.WriteLine("服务已启动。");
+  ...
+  Console.ReadKey();
+  host.Close();
+  ```
+
+- 调用服务
+
+  ```
+  EndpointAddress epaddress=new EndpointAddress("http://localhost:800");
+  BasicHttpBinding binding=new BasicHttpBinding();
+  IServic svobj= ChannelFactory<IService>.CreateChannel(binding,epaddress);
+  productItem p=new ProductItem
+  {
+  	PID=100001,
+  	Name="test product",
+  	Color = "black",
+  	PostTime = DateTime.Now
+  };
+  svobj.NewProduct(p);
+  ```
+
+  客户端提交的SOAP如下：
+
+  ```
+  <s:Envelop xmlns:s="...">
+  	<s:Header>
+  		<h:PostTime xmlns:h="http://tempuri.org/">2019-10-11T14:54:45.1842021+08:00</h:PostTime>
+  	</s:Header>
+  	<s:Body>
+  		<ProductItem xmlns="http://tempuri.org/">
+  			<Color>black</Color>
+  			<Name>test product</Name>
+  			<PID>100001</PID>
+  		</ProductItem>
+  	</s:Body>
+  </s:Envelope>
+  ```
+
+  消息协定独占一条SOAP，而每一轮通信过程，客户端只能向服务器发送一条SOAP。
+
+  消息协定的方法**不允许出现多个输入参数**，返回值，**是void**或者是**消息协定**。
+
+#### 3.4.2 包装元素
+
+当MessageContractAttribute的IsWrapped=true，则消息协定也可以设置独立的命名空间和包装元素名称。
+
+数据协定是一个整体，只需要为类设置包装元素名称和命名空间即可。
+
+示例：
+
+## 四、终结点
+
+一个终结点有三要素：
+
+- 绑定(Binding)：用来描述通信协议相关参数
+- 服务协定(Contract)
+- 地址(Address)
+- 可选要素：行为(Behavor)：添加附加行为开关（如：是否向客户端发送服务器上的错误）
+
+### 4.1 绑定
+
+绑定描述的是与通信相关的各个方面的信息，比如
+
+- 使用的通信协议、
+- 连接超时限制
+- 传输数据的最大缓存限制、
+- 传输过程使用的安全模式
+- 。。。
+
+每个终结点都必须指定一个绑定实例，否则WCF将不知道使用何种协议来通信。
+
+**绑定类**的基类是`Binding`，一个绑定可以由数量不等的绑定元素组成，**绑定元素**的基类是`BindingElement`。
+
+从Binding派生的类：
+
+- 实现CreateBinding-Elements方法，以放回组成该绑定各个方面参数的绑定元素；
+- 实现Scheme属性，它返回绑定所使用通信协议的Uri方案名称，如http或net.tcp
+
+#### 4.1.1 系统提供的绑定
+
+系统提供的绑定：
+
+<img src="/1570861610316.png" alt="1570861610316" style="zoom:80%;" /> 
+
+- 这些绑定可以直接用于终结点。
+- 客户端和服务器上声明的绑定必须是匹配的
+- 绑定的配置可以再程序代码中完成，也可以使用配置文件
+
+#### 4.1.2 示例：输出系统绑定的具体信息
+
+本示例主要以BasicHttpBinding、WSHttpBinding和NetTcpBinding三个绑定为例，演示如何获取绑定的详细信息。
+
+```c#
+Binding[] bindings =
+{
+	new BasicHttpBinding(),
+	new NetTctBinding(),
+	new WSHttpBinding()
+};
+
+foreach(Binding b in bindings)
+{
+	Console.WriteLine($"绑定类型：{b.GetType().Name}");
+	Console.WriteLine($"Uri架构：{b.Scheme}://localhost:8080/service");
+	
+	Console.WriteLine("绑定对象中包含的绑定元素：")；
+	var bdElements = b.CreateBindingElements();
+	foreach(var ele in bdElements)
+	{
+		Console.WriteLine(ele.GetType().Name);
+	}
+	Console.WriteLine("---------------------------------------");
+}
+```
+
+#### 4.1.3 自定义绑定
+
+实现自定义绑定的方法
+
+- 第一种直接从Binding类或其子类派生，编写自定义的绑定类
+- 第二种是**使用CustomBinding**。
+
+推荐第二种方式。
+
+CustomBinding类允许使用若干数量的BindingElement对象进行初始化。
+
+BindingElement是抽象类，是所有绑定元素的基类，从其派生的各种类型实例，都可以用于CustomBinding类初始化。
+
+通过CustomBinding类，可以按照实际需要来"组装"绑定。
+
+向CustomBinding对象添加绑定元素时，必须按一定顺序进行：
+
+绑定元素的添加顺序如下：
+
+![1570869923644](/1570869923644.png)
+
+示例：演示CustomBinding类的用法。
