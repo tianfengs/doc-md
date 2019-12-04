@@ -56,6 +56,35 @@ RHCSS（安全专家）
 
 VmwareWrokStation 11.0
 
+##### 虚拟机三种联网方式说明
+
+ ![ç¬¬1ç« é¨ç½²èæç¯å¢å®è£linuxç³»ç»ãç¬¬1ç« é¨ç½²èæç¯å¢å®è£linuxç³»ç»ã](https://www.linuxprobe.com/wp-content/uploads/2016/03/%E8%99%9A%E6%8B%9F%E6%9C%BA%E7%A1%AC%E4%BB%B6%E7%9A%84%E9%85%8D%E7%BD%AE%E8%BF%87%E7%A8%8B10.png) 
+
+ VM虚拟机软件为用户提供了3种可选的网络模式，分别为桥接模式、NAT模式与仅主机模式。这里选择“仅主机模式”
+1. 桥接模式：相当于在物理主机与虚拟机网卡之间架设了一座桥梁，从而可以通过物理主机的网卡访问外网。
+
+   - 桥接模式就是将主机网卡与虚拟机虚拟的网卡利用虚拟网桥进行通信。
+   - 在桥接的作用下，类似于把物理主机虚拟为一个交换机，所有桥接设置的虚拟机连接到这个交换机的一个接口上，物理主机也同样插在这个交换机当中，所以所有桥接下的网卡与网卡都是交换模式的，相互可以访问而不干扰。
+   - 在桥接模式下，虚拟机ip地址需要与主机在同一个网段，如果需要联网，则网关与DNS需要与主机网卡一致。
+   - 即**虚拟机**要分配主机所在局域网的网址，**模拟成一台独立IP的主机**。
+
+    ![æ¡¥æ¥æ¨¡å¼](http://img.blog.csdn.net/20160408183817187) 
+
+2. NAT模式：让VM虚拟机的网络服务发挥路由器的作用，使得通过虚拟机软件模拟的主机可以通过物理主机访问外网，在真机中NAT虚拟机网卡对应的物理网卡是VMnet8。 如果你的网络ip资源紧缺，但是你又希望你的虚拟机能够联网，这时候NAT模式是最好的选择。NAT模式借助虚拟NAT设备和虚拟DHCP服务器，使得虚拟机可以联网。 
+
+   -  主机网卡直接与虚拟NAT设备相连，然后虚拟NAT设备与虚拟DHCP服务器一起连接在虚拟交换机VMnet8上，这样就实现了虚拟机联网 
+   - 即**虚拟机是**主机网卡下的**一个子网**，可以通过虚拟NAT，和外网进行通信
+
+   ![NATæ¨¡å¼](http://img.blog.csdn.net/20160408184441387)
+
+3. 仅主机模式：仅让虚拟机内的主机与物理主机通信，不能访问外网，在真机中仅主机模式模拟网卡对应的物理网卡是VMnet1。
+
+   - 即**虚拟机是**主机网卡下的**一个子网**，没有虚拟NAT，因此只能和主机网卡通信，不能访问外网
+
+    ![Host-Onlyæ¨¡å¼](http://img.blog.csdn.net/20160408185234834) 
+
+ 
+
 RedHatEnterpriseLinux[RHEL]7.0
 
 Hash1.0.4
@@ -64,33 +93,31 @@ Hash1.0.4
 
 ##### 1.5 从grub引导里重置root密码
 
-重启客户机
+- 重启客户机
 
-选第一项，点击e
+- 选第一项，点击e
 
-移动到linux16那一行，段最后输入
+- 移动到linux16那一行，段最后输入
 
 ```
 rd.break
 ```
 
-ctrl+x
+- 使用ctrl+x运行修改过的内核程序（之后会进入系统**紧急救援模式**）
 
-mount -o remount,rw /sysroot     	#重新挂载根目录，并给它可读可写权限
+- (在紧急救援模式下)依次运行以下代码
 
-chroot /sysroot					#切换根目录到/sysroot
+  ```shell
+  mount -o remount,rw /sysroot     	#重新挂载根目录，并给它可读可写权限
+  chroot /sysroot					#切换根目录到/sysroot
+  echo "linuxprobe" | passwd --stdin root	#将root密码修改为：linuxprobe
+  touch /.autorelabel				# 如果开启了selinux，必须创建更新该目录。
+  ​								# 修改此文件的三个时间戳为当前时间
+  （如出现**实心方块**乱码，需要输入 LANG=en）
+  exit								#从根分区中，退到小系统中
+  reboot
+  ```
 
-echo "linuxprobe" | passwd --stdin root	#将root密码修改为：linuxprobe
-
-touch /.autorelabel				# 如果开启了selinux，必须创建更新该目录。
-
-​								# 修改此文件的三个时间戳为当前时间
-
-（如出现**实心方块**乱码，需要输入 LANG=en）
-
-exit								#从根分区中，退到小系统中
-
-reboot
 
 ```
 **centOS7进入单用户模式的；另一种方法：**
@@ -105,7 +132,7 @@ reboot
 
 ##### 1.5.6 配置一下本机的yum仓库
 
-```
+```shell
 [root@localhost Desktop]#vim /etc/yum.repos.d/rhel.repo
 ​```
 [rhel]							yum仓库唯一标识符，避免与其他仓库冲突
@@ -119,7 +146,7 @@ df -h
 mkdir /media/cdrom
 ```
 
-```
+```shell
 df -h
 umount /dev/sr0
 mount /dev/cdrom  /media/cdrom
@@ -130,7 +157,7 @@ yum install tigervnc-server
 
 清空一下防火墙
 
-```
+```shell
 iptables -F
 ```
 
@@ -207,6 +234,49 @@ rpm  -qp   软件包（rpm） --scripts     	##检测软件在安装或卸�
 
 为解决RPM软件包的相互的依赖关系
 
+常见的Yum命令
+
+| 命令                      | 作用                         |
+| ------------------------- | ---------------------------- |
+| yum repolist all          | 列出所有仓库                 |
+| yum list all              | 列出仓库中所有软件包         |
+| yum info 软件包名称       | 查看软件包信息               |
+| yum install 软件包名称    | 安装软件包                   |
+| yum reinstall 软件包名称  | 重新安装软件包               |
+| yum update 软件包名称     | 升级软件包                   |
+| yum remove 软件包名称     | 移除软件包                   |
+| yum clean all             | 清除所有仓库缓存             |
+| yum check-update          | 检查可更新的软件包           |
+| yum grouplist             | 查看系统中已经安装的软件包组 |
+| yum groupinstall 软件包组 | 安装指定的软件包组           |
+| yum groupremove 软件包组  | 移除指定的软件包组           |
+| yum groupinfo 软件包组    | 查询指定的软件包组信息       |
+
+##### 1.10 Systemd初始化进程
+
+ Linux操作系统的开机过程是这样的，即**从BIOS开始**，然后**进入Boot Loader**，**再加载系统内核**，**然后内核进行初始化**，**最后启动初始化进程**。 
+
+ 红帽RHEL 7系统已经替换掉了熟悉的**初始化进程服务System V init**，正式采用全新的**systemd初始化进程服务**。
+
+ **systemctl管理服务的启动、重启、停止、重载、查看状态等常用命令** 
+
+| System V init命令（RHEL 6系统） | systemctl命令（RHEL 7系统）   | 作用                           |
+| ------------------------------- | ----------------------------- | ------------------------------ |
+| service foo start               | systemctl start foo.service   | 启动服务                       |
+| service foo restart             | systemctl restart foo.service | 重启服务                       |
+| service foo stop                | systemctl stop foo.service    | 停止服务                       |
+| service foo reload              | systemctl reload foo.service  | 重新加载配置文件（不终止服务） |
+| service foo status              | systemctl status foo.service  | 查看服务状态                   |
+
+  **systemctl设置服务开机启动、不启动、查看各级别下服务启动状态等常用命令** 
+
+| System V init命令（RHEL 6系统） | systemctl命令（RHEL 7系统）              | 作用                               |
+| ------------------------------- | ---------------------------------------- | ---------------------------------- |
+| chkconfig foo on                | systemctl enable foo.service             | 开机自动启动                       |
+| chkconfig foo off               | systemctl disable foo.service            | 开机不自动启动                     |
+| chkconfig foo                   | systemctl is-enabled foo.service         | 查看特定服务是否为开机自启动       |
+| chkconfig --list                | systemctl list-unit-files --type=service | 查看各个级别下服务的启动与禁用情况 |
+
 ##### 本章节的复习题：
 
 a. 为什么建议读者校验下载的系统镜像或工具
@@ -279,7 +349,7 @@ SEE ALSO：		相关的资料
 HISTORY：		维护历史与联系方式
 ```
 
-man中命令后面括号里的数字含义
+man中命令后面括号里的数字含义:例如：MAN(1)
 
 ```
 1、Standard commands （标准命令）
@@ -315,10 +385,9 @@ l 本地文档， 与本特定系统有关的。
 
    ```
    用于显示及设置系统时间或日期，格式为：date [选项] [+指定的格式]
-   
    ```
-
-   | 参数 | 作用           |      |
+   
+| 参数 | 作用           |      |
    | ---- | -------------- | ---- |
    | %t   | 跳格           |      |
    | %H   | 小时00-23      |      |
@@ -326,8 +395,8 @@ l 本地文档， 与本特定系统有关的。
    | %M   | 分钟           |      |
    | %S   | 秒             |      |
    | %j   | 今年中的第几天 |      |
-
-   ```
+   
+```
    例如，把打包后的文件自动按"年月日”的格式打包成“backup-2017-9-1.tar.gz"
    查看当前时间：
    [root@linuxprobe ~]# date
@@ -363,7 +432,7 @@ l 本地文档， 与本特定系统有关的。
    [root@db-server ~]# date -R	（检测是否成功）
    Mon, 12 Jan 2015 10:56:10 +0800
    ```
-
+   
 3. reboot命令
 
    ```

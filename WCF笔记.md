@@ -1778,4 +1778,392 @@ BindingElement是抽象类，是所有绑定元素的基类，从其派生的各
 
 ![1570869923644](/1570869923644.png)
 
-示例：演示CustomBinding类的用法。
+示例：演示CustomBinding类的用法。(设置了编码和传输协议)
+
+```c#
+// 使用文本编码
+TextMessageEncodingBindingElement e= new TextMessageEncodingElement();
+// 使用Http传输协议
+HttpTransportBindingElement t = new HttpTransportBindingElement();
+// **创建自定义绑定**
+CustomBinding binding = new CutomBinding(e,t);
+```
+
+### 4.2 添加终结点
+
+- 一个**进程**可以包含**多个WCF服务**
+
+- 一个**WCF服务** **关联** 一个服务实现**类**(每个WCF服务 = 一个ServiceHost实例)
+- 一个**WCF服务** 有 **多个终结点** 
+
+客户通过调用终结点来调用服务。
+
+一个终结点有三个必备要素：
+
+- 绑定：绑定决定了该终结点在通信过程中所使用的传输协议和通道形状，包括是否启用安全项。
+- 地址：
+- 协定：服务功能接口，协定是由Action标头的值来决定。
+
+#### 4.2.1 默认终结点
+
+根据以下两个要素确定：
+
+- 服务实现类：
+
+  一个类可以实现多个接口（即多个服务协定），即**一个服务实现类可以同时实现多个服务协定**。
+
+  WCF检测服务实现类实现的接口中，哪些应用了ServiceContractAttribute，**寻找**这些接口为**服务协定**。
+
+- 基址：就是服务在运行时所使用的根地址。
+
+  如果没有向ServiceHost显示添加终结点，那么在实例化ServiceHost时，必须向其构造函数提供一个基址URI。
+
+  终结点所使用的绑定类型也由基址决定。
+
+ServiceHost对象最终会创建多少个终结点，就得综合上述两个要素来计算。自动创建的终结点数：
+$$
+终结点数 = 基址个数 * 服务协定个数
+$$
+示例：
+
+#### 4.2.2 显示添加终结点的方法
+
+示例：
+
+### 4.3 地址
+
+几种情况：
+
+- 如果没有显示添加终结点，应指定一个基址
+- 如果提供了基址，并显示的添加了终结点，那么终结点的地址既可以**相对**于基址，也可以指定单独的**绝对地址** 
+- 如果添加的终结点地址是相对地址，那么所使用的绑定类型必须支持基址的协议架构(**绑定类型统一**)
+- 地址可以使用多层次路径
+
+#### 4.3.1 基址与终结点地址
+
+示例：
+
+#### 4.3.2 地址头
+
+在指定终结点时，有两个可选项，分别是：
+
+- 地址头：
+
+  地址头是插入到SOAP消息头发送的，终结点地址带有地址头，每次访问该终结点所发送的SOAP消息都会在heade元素中插入地址头信息。
+
+- 终结点标识：
+
+  以EndpointIdentity类为基类，用于标识终结点，作用：提供给客户端进行身份验证，即确认其所调用的服务是否合法。
+
+客户端在访问服务终结点的时候，必须提供相同的地址头，如果通信双方所使用的地址头不一致，就无法调用服务。示例：
+
+```c#
+Uri servAdd = new Uri("http://localhost:500");
+AddressHeader addrHeader = AddressHeader.CreateAddressHeader("other","demo-data",2000);
+EndpointAddress epAdd = new EndpointAddress(servAdd, addrHeader);
+```
+
+最终SOAP显示的如下：
+
+```xml
+<s:Envelop xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+	<s:Header>
+		<other xmlns="demo-data">2000</other>
+		... ...
+	</s:Header>
+	<s:Body>
+		... ...
+	</s:Body>
+</s:Envelope>
+```
+
+#### 4.3.3 处理重复的地址头
+
+- GetHeader方法有多个重载版本，通过元素名和命名空间来获取消息头value，使用此重载：
+
+  ```
+  T GetHeader<T>(string name, string namespace);
+  ```
+
+  如：
+
+  ```
+  var headers = OperationContract.Current.IncomingMessageHeaders;
+  string content = headers.GetHeader<string>("filename","urn:files");
+  Console.WriteLine($"地址头的值：{content}");
+  ```
+
+  
+
+- 如果消息头列表中存在的元素名和命名空间重复的项，就必须采用以下版本：
+
+  ```
+  T GetHeader<T>(int index);
+  ```
+
+  如：
+
+  ```c#
+  var headers = OperationContext.Current.IncomingMessageHeaders;
+  int hdcount = headers.Count;	// 总数
+  List<string> vals = new List<string>();
+  for(int i=0; i<hdcount; i++)
+  {
+  	MessageHeaderInfo info = headers[i];
+  	// 只提取需要的消息头
+  	if(info.name == "filename" && info.Namespace =="urn:files")
+  	{
+  		string temp = headers.GetHeader<string>(i);
+  		vals.Add(temp);
+  	}
+  }
+  // 输出结果
+  Console.WriteLine($"获取地址头：{string.Join("、",vals.ToArray())});
+  ```
+
+#### 4.3.4 临时定义消息头
+
+地址头会在同一个终结点上通信的所有消息中插入自定义消息头。
+
+如果开发者只希望在某一条消息或某一轮通信中插入自定义消息头，就不能使用地址头。
+
+此时要使用基于操作上下文的**OperationContextScope类**。
+
+OperationContextScope**类创建一个局部范围**，在此范围内可以通过Operation-Context类添加自定义消息头，或访问其它属性(如安全设置)。
+
+当Operation-ContextScope实例**被释放后**，操作**上下文会被还原**，对**上下文**所作的**修改将被清除**。
+
+示例：客户端：
+
+```c#
+BasicHttpBinding binding = new BasicHttpBinding();
+// 创建地址头(与服务器地址头相同)
+AddressHeader addrHeader = AddressHeader.CreateAddressHeader("other","demo-data",2000);
+EndpointAddress epaddr= new EndpointAddress(new Uri(svaddr), addrHeader);
+IDemo channel = ChannelFactory<IDemo>.CreateChannel(binding, epaddr);
+
+// 第一次调用，添加一个名为att_data的消息头
+using(OperationContextScope scope = new OperationContextScope((IContextChannel)channel))
+{
+	//插入自定义消息头
+	OperationContext context = OperationContext.Current;
+	MessageHeader hd = MessageHeader.CreateHeader("att_data","sample-data","e6acd75f6");
+	context.OutgoingMessageHeaders.Add(hd);
+	
+	channel.Run();
+}
+
+// 第二次调用，调用使用普通的“地址头”
+channel.Run();
+```
+
+结果，第一次调用在原来的地址头上，加了一个临时的消息头：
+
+```xml
+<s:Header>
+	<att_data xmlns="sample-data">e6acd75f6</att_data>
+	<other xmlns="demo-data">2000</other>
+	<To ... ...
+	<Action ... ...
+</s:Header>
+```
+
+在调用临时消息头时，代码应在OperationContextScope范围内，创建其实例时，需要提供`IContextChannel`接口。
+
+当出了OperationContextScope范围后，其实例就会被释放。
+
+### 4.4 逻辑地址与物理地址
+
+终结点有两个地址：
+
+- Address：逻辑地址
+- ListenUri：物理地址（或 侦听地址），真正用于通信的地址
+
+一般只声明了逻辑地址Address，ListenUri的值会与Address的值相同。
+
+物理地址用于通信
+
+
+
+## 五、配置文件
+
+用配置文件和用代码配置是等效的。
+
+### 5.1 WCF配置节的基本结构
+
+- 配置文件是一个XML文档，根元素是configuration。
+
+- 之下，按照功能，**划分为多个配置节**。如：
+
+  - 用于调试跟踪相关的配置节：System.diagnostics
+  - 用于配置CLR版本相关的配置节：runtime
+  - 用于WCF的配置节：system.serviceModel
+  - ... ...
+
+- 配置节：system.serviceModel
+
+  ```xml
+  <system.serviceModel>
+      <behaviors>			用于配置Behavior对象
+      	...
+      </behaviors>
+  	<bindings>			配置绑定对象，如WSHttpBinding、NetTcpBinding等
+      </bindings>
+      <client>			客户端专用，用于在客户端配置要调用服务的终结点
+      </client>
+      <diagnostics>		配置WCF的跟踪信息，如以日志形式记录通信的SOAP消息
+      </diagnostics>
+      <extensions>		用于声明扩展的WCF对象，比如自定义的Behavior
+      </extensions>
+      <routing>			用于服务器端，功能是配置路由信息，对服务的调用进行路由与筛选
+      </routing>
+      <services>			
+      </services>
+      <standardEndpoints>
+      </standardEndpoints>
+  </system.serviceModel>
+  ```
+
+
+
+
+
+
+## 九 验证与授权
+
+WCF安全功能主要包括：
+
+- 暗号约定——消息签名/加密
+- 你是谁——服务器与客户端的身份验证
+- 谁可以用——授权
+
+### 9.1 绑定的安全模式
+
+面向不同**传输协议的Binding类**型都公开了Security属性，用于设定与安全相关的参数。**Mode属性**指定WCF通信的安全模式。**安全模式**分类：
+
+- **消息安全**——SOAP消息在传输之前会进行签名或者加密
+- **传输安全**——在传输层对数据进行保护
+- **混合**——在消息层和传输层同时对数据进行保护
+- **无**——明文传输，数据不做保护
+
+### 9.2 凭据
+
+- 服务器和客户端双方出示自己的身份评价：双向验证
+- 服务器出示凭据：单向验证
+
+客户端，要在调用的终结点上配置标识，例如标识服务器主机的域名，服务器证书的公钥数据等。
+
+**服务器的凭据**主要有：数字证书、Windows账户两种。
+
+**客户端凭据**：数字证书、Windows身份验证、用户名/密码验证、安全令牌等。
+
+### 9.3 证书验证
+
+对于外部网络，数字证书来进行身份验证较为常用。Windows身份验证一般适合在内部网络中使用。
+
+WCF常用X-509证书来进行身份验证，证书不仅标识主体身份，还可以用于对传输的数据进行保护。证书可以同时包含公钥和私钥（密钥对），也可以只包含公玥。
+
+**私玥用于解密**数据，**公玥**可以对外传播，提供给想要发送数据给你的人，**用来加密**。
+
+密钥除了用于**加密和解密**，也可以用于**签名**。
+
+**加密是防止别人看到数据内容**，**签名是防止他人篡改数据**。
+
+#### 9.3.1 制作测试证书
+
+WindowsSDK工具包提供了一个MakeCert工具，可以生成用于测试的证书。
+
+在Terminal上（cmd）写入如下命令，列出制作认证证书的命令参数说明（系统要已经安装WindowsSDK）：
+
+Win10 64位系统在 C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64 下，应把此位置加入系统的环境变量中。
+
+```powershell
+MakeCert -?
+
+在Windows Powershell里显示如下：
+
+Windows PowerShell
+版权所有 (C) Microsoft Corporation。保留所有权利。
+
+尝试新的跨平台 PowerShell https://aka.ms/pscore6
+
+PS C:\Users\tianf> makecert -?
+Usage: MakeCert [ basic|extended options] [outputCertificateFile]
+Basic Options
+ -sk  <keyName>      Subject's key container name; To be created if not present
+ -pe                 Mark generated private key as exportable
+ -ss  <store>        Subject's certificate store name that stores the output
+                     certificate
+ -sr  <location>     Subject's certificate store location.
+                        <CurrentUser|LocalMachine>.  Default to 'CurrentUser'
+ -#   <number>       Serial Number from 1 to 2^31-1.  Default to be unique
+ -$   <authority>    The signing authority of the certificate
+                        <individual|commercial>
+ -n   <X509name>     Certificate subject X500 name (eg: CN=Fred Dews)
+ -?                  Return a list of basic options
+ -!                  Return a list of extended options
+PS C:\Users\tianf>
+```
+
+执行以下命令：
+
+```powershell
+makecert -n "CN=Test" -r -sr CurrentUser -ss My
+makecert -n "CN=Zhou" -r -ss My -b 05/11/2019 -e 06/01/2020
+```
+
+- -r：自签名证书，即自己给自己颁发证书
+- -n：证书的显示名，一般指定为 CN=<名称>
+- -sr：有两个值：
+  - LocalMachine：证书与本地计算机有关
+  - CurrentUser：证书只有前登录系统的用户才能访问
+- -ss：证书存储区。My，即个人证书
+- -b,-e：指定证书的有效期
+
+打开当前用户的证书管理器（certmgr.msc），个人节点如下：
+
+<img src="/1571829600626.png" alt="1571829600626" style="zoom:80%;" /> 
+
+#### 9.3.2 为服务器设置证书
+
+### 9.4 基于用户名/密码的身份验证
+
+客户端验证，一般使用用户名和密码作为凭据进行验证，会更便捷。一般不使用数字证书。
+
+用户名/密码验证方式有三种模型：
+
+- 集成Windows身份验证，即使用登录Windows系统的用户名和密码进行验证。适用于内部网络
+- 基于ASP.NET成员资格提供程序的验证，即基于Web相关技术的验证方式，如：Web Forms
+- 自定义，最为灵活，开发者可以根据实际需求来检查用户名和密码
+
+#### 9.4.1 集成Windows账户的验证
+
+
+
+#### 9.4.2 自定义的用户名/密码验证
+
+最为灵活。采用自定义的用户名和密码验证模型，必须实现一个**验证类**，该类要求实现 UserNamePasswordValidator抽象类（位于System.IdentityModel.Selectors命名空间，需要引用System.IdentityModel程序集）。
+
+UserNamePasswordValidator抽象类的继承类，必须实现以下抽象方法，自定义的用户名和密码验证代码就写在Validate()方法中：
+
+```
+abstract void Validate(string userName, string password);
+```
+
+### 9.5 角色与授权
+
+**授权**：是对客户端所提供的身份凭据进行评估，确定该客户端是否具备访问权限的过程。
+
+多数情况下，多个用户可能需要相同的权限。比如，多个用户都具有写入数据的权限，所以，权限是无法与单个用户绑定的。于是就用到了——**角色**。权限想通过的用户可以归类到一个角色下面，如：管理员、录入员、审批员。
+
+**授权评估**是由一系列授权策略组成，可以通过实现`IAuthorizationPolicy接口`来实现授权策略。
+
+授权评估后，需要将**授权策略实例和关联的声明集(ClaimSet)**，添加到**评估上下文(EvaluationContext)**。
+
+声明集，为一个Claim列表。
+
+声明，可以理解为授权评估后，为验证实体附加的一些补充信息，例如：一个Uri，一个Email地址，一个用户名，一个哈希值等。
+
+所有的评估策略执行后，最后会汇总到授权管理器(ServiceAuthorization Manager)中进行综合处理，最终确定实体是否具有访问权限。
+
+授权策略好比证据链的收集与验证过程，授权管理器的工作类似于开庭审理做出最终判决。
