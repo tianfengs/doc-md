@@ -2122,7 +2122,7 @@ Item Widgets 是 GUI 设计中常用的组件，本节通过实例 samp4_7 先�
 
 数据库相关的 3 个模型类将在介绍数据库编程时专门说明。如果这些现有的模型类无法满足需求，用户可以从 QAbstractltemModel、QAbstractListModel 或 QAbstractTableModel 继承，生成自己定制的数据模型类。
 
-### 视图组件
+### 视图组件——(调用setModel() 函数，便利lei)
 
 视图组件（View）就是显示数据模型的数据的界面组件，Qt 提供的视图组件如下：
 
@@ -2159,9 +2159,17 @@ QAbstractltemDelegate 是所有代理类的基类，作为抽象类，它不能�
 
 ### Model/View结构的一些概念
 
-在 Model/View 结构中，数据模型为视图组件和代理提供存取数据的标准接口。在 Qt 中，所有的数据模型类都从 QAbstractltemModel 继承而来，不管底层的[数据结构](http://c.biancheng.net/data_structure/) 是如何组织数据的，QAbstractltemModel 的子类都以表格的层次结构表示数据，视图组件通过这种规则来存取模型中的数据，但是表现给用户的形式不一样。 
+在 Model/View 结构中，数据模型为视图组件和代理提供存取数据的标准接口。在 Qt 中，所有的数据模型类都从 QAbstractltemModel 继承而来，不管底层的[数据结构](http://c.biancheng.net/data_structure/) 是如何组织数据的，QAbstractltemModel 的子类都以表格的层次结构表示数据，视图组件通过这种规则来存取模型中的数据，但是表现给用户的形式不一样。  
 
- ![æ°æ®æ¨¡åçå ç§è¡¨ç°å½¢å¼](http://c.biancheng.net/uploads/allimg/190103/2-1Z1031610455L.gif) 
+<center>
+	<img src="/2-1Z1031610455L.gif"  alt="图5"/>
+    <br>
+	<div style="display:inline-block; padding: 2px; border-bottom: 1px solid ##d9d9d9;
+                font-weight:bold;">
+		图5 数据模型中的几种表现模式
+	</div>
+</center> 
+
 
  不管数据模型的表现形式是怎么样的，数据模型中存储数据的**基本单元都是项（item）**，每个项有**一个行号、一个列号，还有一个父项索引**。 
 
@@ -2171,7 +2179,7 @@ QAbstractltemDelegate 是所有代理类的基类，作为抽象类，它不能�
 
 #### 行号和列号
 
-数据模型的基本形式是用行和列定义的表格数据。要获得一个模型索引，必须提供 3 个参数：行号、列号、父项的模型索引。例如，对于如图 5 中的表格数据模型中的 3 个数据项 A、B、C，获取其模型索引的代码是： 
+数据模型的基本形式是用行和列定义的表格数据。要获得一个模型索引，必须提供 3 个参数：行号、列号、父项的模型索引。例如，对于如**图 5** 中的表格数据模型中的 3 个数据项 A、B、C，获取其模型索引的代码是： 
 
 ```
 QModelIndex indexA = model->index(0, 0, QModelIndex());

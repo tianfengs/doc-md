@@ -5,7 +5,7 @@ typora-copy-images-to: pics
 
 
 
-## 第1篇
+# 第1篇
 
 ### 第2章 嵌入式开发环境构建
 
@@ -1363,7 +1363,7 @@ $ sudo chown book:book /work -R
 
 
 
-## 第2篇 ARM9 嵌入式系统基础实例篇
+# 第2篇 ARM9 嵌入式系统基础实例篇
 
 - GPIO接口
 - 存储控制器
@@ -2331,7 +2331,27 @@ $ sudo chown book:book /work -R
 
 
 
+# 第3篇 嵌入式Linux系统移植篇
 
+### 第15章 移植U-Boot
 
+1. Bootloader简介
 
+   系统上电后，一段初始化程序：
 
+   - 关闭Watchdog
+   - 改变系统时钟
+   - 初始化存储控制器
+   - 将更多的代码复制到内存中
+
+   能将操作系统内核复制到内存中运行（从本地（Flash）或远端网络）的一段程序，称之为Bootloader。
+
+   Bootloader是一段程序，在系统上电开始执行，初始化硬件设备、准备软件环境，最后调用系统内核。
+
+   Monitor：增强Bootloader，增加网络功能、从PC上通过串口或网络下载文件、烧写文件、将Flash上压缩的文件解压后运行。
+
+   Bootloader依赖于硬件。
+
+   U-Boot 是支持CPU架构比较多的Bootloader。
+
+   
